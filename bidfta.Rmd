@@ -1,0 +1,159 @@
+---
+title: "FastTrack Auction Scraper"
+author: "Beaver Brigade Research & Innovation (BBRI)"
+output:
+  html_document:
+    highlight: tango
+    theme: journal
+---
+******
+
+#### Getting a list of auctions
+First we scrape the front page to learn what auctions are live. 
+The tag for each auction container is `.auction`
+```{r Dependencies, echo=F, message=F}
+library(rvest)
+library(dplyr)
+library(knitr)
+library(data.table)
+library(rjson)
+curtime  <- Sys.time()
+```
+
+We'll need to define some helpful functions for cleaning strings
+```{r Helper Functions}
+clean_str <- function(str) {
+  str %>%
+    gsub("[\t\n\r\v\f]", " ", .) %>%
+    gsub(" +"," ",.) %>%
+    gsub("^\\s+|\\s+$", "", .)
+  }
+```
+
+
+```{r Top Level Auction Links}
+link  <- html("http://bidfta.com/") %>%
+  html_nodes(".auction")  %>% 
+  html_node("a") %>%
+  html_attr("href")
+
+fix_these  <- grep("mnlist",link)
+
+link[fix_these] <- link[fix_these] %>%
+  gsub("mnlist","mndetails",.) %>%
+  sub("/category/ALL","",.)
+```
+
+
+We create a function that traverses an auction link node to get the specific auction details we need
+```{r Auction List & Details Scraper Function}
+auction_details  <- function(link) {
+  a  <- list()
+  
+  tmp <- html(link) %>%
+    html_nodes("table tr td")
+  
+  a$date  <- tmp[[6]] %>% 
+    html_text %>%
+    gsub("st|nd|rd|th","", .) %>%
+    gsub("\\.", ",", .) %>%
+    strptime("%B %e, %Y %R")
+  
+  if (is.null(a$date) | a$date < curtime) return(NULL)
+  
+  a$title  <- tmp %>% 
+    html_nodes("#auction_title") %>%
+    .[[1]] %>% 
+    html_text
+  
+  a$location  <- tmp[[8]] %>% html_text
+    
+  a$link  <- link %>%
+    gsub("mndetails","mnlist",.) %>%
+    paste0("/category/ALL")
+  a
+  }
+
+```
+
+Now we can traverse all the nodes to get all the auction details. We'll throw out auctions that have already expired.
+```{r}
+  auctions <- link[40:50] %>%
+    lapply(auction_details) %>%
+    .[!sapply(.,is.null)]
+  
+  auctions_df <- auctions %>% 
+    lapply(data.frame, stringsAsFactors=FALSE) %>%
+    do.call(rbind, .)
+```
+
+
+Here's what we scraped:
+```{r}
+auctions_df %>%
+  kable
+```
+
+#### Filtering
+It'll probably take a while to download all the item lists, so we'll filter out auctions not on the approved list.
+```{r}
+# Good locations
+good_loc  <- c("Cincinnati", "Sharonville", "West Chester") %>% 
+  sapply(function(x) grepl(x, auctions_df$location, ignore.case = T)) %>%
+  apply(1, any)
+
+auctions_df <- filter(auctions_df, good_loc)
+```
+
+#### Getting the auction itemlists
+```{r Auction Itemlists}
+get_itemlist  <- function(lnk){
+  tmp <- html(lnk) %>%
+    html_node("#DataTable")
+  
+  img_src  <-  tmp  %>%
+    html_node("img") %>%
+    html_attr("src") %>%
+    gsub("\\/\\w+\\.(jpg|jpeg|png)","",.)
+  
+  tmp %>%
+    html_table(header = T) %>%
+    mutate(Description = iconv(Description, to='UTF-8-MAC', sub = '')) %>%
+    mutate(img_src = paste0(img_src, "/", Item)) %>%
+    mutate(link = lnk  %>% gsub("category/ALL","", .) %>% paste0(Item)) %>%
+    select(-contains("Photo"))
+  
+} 
+
+# tmp <- auctions_df$link[151] %>%
+#   lapply(get_itemlist)
+
+items <- auctions_df$link %>%
+  lapply(get_itemlist)
+
+names(items) <- auctions_df$title
+
+items_df <- items %>%
+  do.call(rbind, .) %>%
+  mutate(Auction = gsub("\\.[0-9]+","", row.names(.)))
+
+```
+
+#### Search
+```{r}
+phrase  <- "florentine"
+
+# # Search for `list` object
+# found <- items %>% 
+#   lapply(function(x) grep(phrase, x$Description, value = T, ignore.case = T)) %>%
+#   .[ sapply(., length) > 0 ]
+
+# Search for `data frame` object
+found <- items_df$Description %>% 
+  grep(phrase, ., value = F, ignore.case = T) %>%
+  items_df[.,] %>%
+  mutate(Photo = paste0('<a href = "', link ,'"><img src="',img_src, '"></a>'))
+
+found
+```
+
