@@ -30,7 +30,7 @@ clean_str <- function(str) {
     gsub("[\t\n\r\v\f]", " ", .) %>%
     gsub(" +"," ",.) %>%
     gsub("^\\s+|\\s+$", "", .)
-  }
+}
 
 # Pulls auction details from an auction description page link
 auction_details  <- function(link) {
@@ -45,7 +45,7 @@ auction_details  <- function(link) {
     gsub("(\\d+)(st|nd|rd|th)","\\1", .) %>%
     strptime("%B %e, %Y %R")
 
-  print(link)
+  a$date %>% paste("|", link) %>% print
   if (is.na(a$date) | is.null(a$date) | a$date < curtime) return(NULL)
 
   a$title  <- tmp %>%
@@ -61,12 +61,15 @@ auction_details  <- function(link) {
   a$link  <- link %>%
     gsub("mndetails","mnlist",.) %>%
     paste0("/category/ALL")
+  print('ok')
   a
-  }
+}
 
 
 # Pulls item lists from an auction item list link
 get_itemlist  <- function(lnk){
+
+  lnk %>% paste("Working |", .) %>% print
 
   root_link <- lnk %>%
     gsub("category/ALL","", .)
@@ -80,7 +83,10 @@ get_itemlist  <- function(lnk){
     mutate(Description = iconv(Description, to='UTF-8-MAC', sub = '')) %>%
     mutate(link = paste0(root_link, Item))
 
-  n <- nrow(itemlist)
+  print("itemlist ok")
+
+  lnk %>% paste("item |", .)
+  n <- nrow(itemlist)-1
 
   img_link <- itemlist$link %>%
     .[n] %>%
@@ -88,6 +94,8 @@ get_itemlist  <- function(lnk){
     html_node("#DataTable") %>%
     html_node("img") %>%
     html_attr("src")
+
+  print("img_link ok")
 
   img_prefix <- img_link %>%
     gsub("/[^/]+$","/",.)
