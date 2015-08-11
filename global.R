@@ -84,9 +84,9 @@ get_itemlist  <- function(lnk){
     mutate(link = paste0(root_link, Item))
 
   print("itemlist ok")
+  itemlist %>%  print
 
-  lnk %>% paste("item |", .)
-  n <- nrow(itemlist)-1
+  n <- nrow(itemlist) - 5
 
   img_link <- itemlist$link %>%
     .[n] %>%
