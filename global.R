@@ -88,26 +88,26 @@ get_itemlist  <- function(lnk){
 
   n <- nrow(itemlist) - 5
 
-  img_link <- itemlist$link %>%
+  try(img_link <- itemlist$link %>%
     .[n] %>%
     html %>%
     html_node("#DataTable") %>%
     html_node("img") %>%
-    html_attr("src")
+    html_attr("src"))
 
   print("img_link ok")
 
-  img_prefix <- img_link %>%
-    gsub("/[^/]+$","/",.)
+  try(img_prefix <- img_link %>%
+    gsub("/[^/]+$","/",.))
 
-  img_suffix <- img_link %>%
+  try(img_suffix <- img_link %>%
     regexpr("\\.\\w+$",.) %>%
-    regmatches(img_link, . )
+    regmatches(img_link, . ))
 
-  img_suffix <- img_link %>%
-    gsub(paste0(img_prefix, itemlist$Item[n]), "", .)
+  try(img_suffix <- img_link %>%
+    gsub(paste0(img_prefix, itemlist$Item[n]), "", .))
 
-  itemlist %>%
-    mutate(img_src = paste0(img_prefix, Item, img_suffix))
+  try(itemlist %>%
+    mutate(img_src = paste0(img_prefix, Item, img_suffix)))
 
 }
