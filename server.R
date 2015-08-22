@@ -16,14 +16,26 @@ if ( curtime >= lasttime + auto_refresh_time ) {
     gsub("mnlist","mndetails",.) %>%
     sub("/category/ALL","",.)
 
+  # Time the 1st retrieval
+  print(Sys.time())
+
+  ptm <- proc.time()
   auctions <- link %>%
     #.[40:60] %>%
-    lapply(auction_details) %>%
+    #lapply(auction_details) %>%
+    mclapply(auction_details, mc.cores = 8) %>%  #trying multithreaded
     .[!sapply(.,is.null)]
 
   auctions_df <- auctions %>%
     lapply(data.frame, stringsAsFactors=FALSE) %>%
     do.call(rbind, .)
+
+  auctions_df %>% head %>% print
+
+  #Output time to shell
+  print(proc.time() - ptm)
+  print(Sys.time())
+  stop()
 
   # Good locations
   good_loc  <- c("Cincinnati", "Sharonville", "West Chester") %>%

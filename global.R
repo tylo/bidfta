@@ -5,6 +5,7 @@ library(dplyr)
 library(knitr)
 library(data.table)
 library(rjson)
+require(parallel)
 
 auto_refresh_time <- 3600
 curtime  <- Sys.time()
@@ -61,7 +62,7 @@ auction_details  <- function(link) {
   a$link  <- link %>%
     gsub("mndetails","mnlist",.) %>%
     paste0("/category/ALL")
-  print('ok')
+  #print('ok')
   a
 }
 
