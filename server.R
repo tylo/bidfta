@@ -1,79 +1,28 @@
 # server.R
-print(lasttime + auto_refresh_time)
-print(curtime)
 
 if ( curtime >= lasttime + auto_refresh_time ) {
 
-
-  link  <- html("http://bidfta.com/") %>%
-    html_nodes(".auction")  %>%
-    html_node("a") %>%
-    html_attr("href")
-
-  fix_these  <- grep("mnlist",link)
-
-  link[fix_these] <- link[fix_these] %>%
-    gsub("mnlist","mndetails",.) %>%
-    sub("/category/ALL","",.)
-
-  # Time the 1st retrieval
-  print(Sys.time())
-
-  ptm <- proc.time()
-  auctions <- link %>%
-    #.[40:60] %>%
-    #lapply(auction_details) %>%
-    mclapply(auction_details, mc.cores = 8) %>%  #trying multithreaded
-    .[!sapply(.,is.null)]
-
-  auctions_df <- auctions %>%
-    lapply(data.frame, stringsAsFactors=FALSE) %>%
-    do.call(rbind, .)
-
-  auctions_df %>% head %>% print
-
-  #Output time to shell
-  print(proc.time() - ptm)
-  print(Sys.time())
-  stop()
-
-  # Good locations
-  good_loc  <- c("Cincinnati", "Sharonville", "West Chester") %>%
-    sapply(function(x) grepl(x, auctions_df$location, ignore.case = T)) %>%
-    apply(1, any)
-  auctions_df <- filter(auctions_df, good_loc)
-
-  # Get Items
-  print("GET ITEMS")
-  items <- auctions_df$link %>%
-    lapply(get_itemlist)
-  names(items) <- auctions_df$title
-
-  items_df <- items %>%
-    do.call(rbind, .) %>%
-    mutate(Auction = gsub("\\.[0-9]+","", row.names(.)))
-
-  write.csv(curtime, "CSV/timestamp.csv", row.names = F)
-  write.csv(auctions_df, "CSV/auctions.csv", row.names = F)
-  write.csv(items_df, "CSV/items.csv", row.names = F)
+    rescrape()
 
 } else {
 
-  # Filter out auctions that have already passed
-  auctions_df  <- "CSV/auctions.csv" %>%
-    read.csv(stringsAsFactors = F) %>%
-    filter(date > curtime)
+    # Filter out auctions that have already passed
+    auctions_df  <- "CSV/auctions.csv" %>%
+        read.csv(stringsAsFactors = F) %>%
+        filter(date > curtime)
 
-  auctions_df$date  <- auctions_df$date %>%
-    strptime(time_file_format) %>%
-    as.POSIXct
+    auctions_df$date  <- auctions_df$date %>%
+        strptime(time_file_format) %>%
+        as.POSIXct
 
 
-  # Filter out items from auctions that have passed
-  items_df  <- "CSV/items.csv" %>%
-    read.csv(stringsAsFactors = F) %>%
-    filter(Auction %in% auctions_df$title)
+    # Filter out items from auctions that have passed
+    items_df  <- "CSV/items.csv" %>%
+        read.csv(stringsAsFactors = F) %>%
+        filter(Auction %in% auctions_df$title)
 }
+
+############ SERVER ##################
 
 server <- function(input, output, session) {
 
@@ -109,7 +58,7 @@ server <- function(input, output, session) {
   search_res  <- eventReactive( input$searchButton , {
     phrase = input$searchText
     items_df$Description %>%
-      grep(phrase, ., value = F, ignore.case = T) %>%
+      grep(paste0(paste0("(^|\\W)",phrase, "($|\\W)")), ., value = F, ignore.case = T) %>%
       items_df[.,]
   })
 
