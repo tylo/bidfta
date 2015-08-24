@@ -12,11 +12,12 @@ curtime  <- Sys.time()
 
 # Some constants
 time_file_format  <- "%Y-%m-%d %H:%M:%S"
+amazon_base <- "http://www.amazon.com/s/ref=nb_sb_noss?url=search-alias%3Daps&field-keywords="
 
 # Recording current time and checking timestamp from previously downloaded data
 
-lasttime <-
-    try(read.csv("CSV/timestamp.csv", stringsAsFactors = F), silent = T)
+lasttime <- try(read.csv("CSV/timestamp.csv", stringsAsFactors = F), silent = T)
+
 if (class(lasttime) == "try-error")
 {
     lasttime <- curtime  - auto_refresh_time
@@ -33,10 +34,16 @@ if (class(lasttime) == "try-error")
 cat("Current Time: ", format(curtime, time_file_format), "\n")
 cat("Refresh Due: ",format(lasttime + auto_refresh_time, time_file_format), "\n\n")
 
+######################################
+#------------------------------------#
+#------- HELPER FUNCTIONS -----------#
+#------------------------------------#
+######################################
 
-######## HELPER FUNCTIONS ################
+######################################
+#-------- FUNCTION: RESCRAPE --------#
+######################################
 
-## RESCRAPE ##
 rescrape <- function() {
     link  <- html("http://bidfta.com/") %>%
         html_nodes(".auction")  %>%
@@ -99,6 +106,9 @@ rescrape <- function() {
 
 }
 
+######################################
+#------- FUNCTION: CLEAN_STR --------#
+######################################
 
 clean_str <- function(str) {
     str %>%
@@ -106,6 +116,10 @@ clean_str <- function(str) {
         gsub(" +"," ",.) %>%
         gsub("^\\s+|\\s+$", "", .)
 }
+
+######################################
+#----- FUNCTION: AUCTION_DETAILS ----#
+######################################
 
 # Pulls auction details from an auction description page link
 auction_details  <- function(link) {
@@ -142,6 +156,9 @@ auction_details  <- function(link) {
     a
 }
 
+######################################
+#----- FUNCTION: GET_ITEMSLIST ------#
+######################################
 
 # Pulls item lists from an auction item list link
 get_itemlist  <- function(lnk) {
@@ -155,8 +172,8 @@ get_itemlist  <- function(lnk) {
         html %>%
         html_node("#DataTable") %>%
         html_table(header = T) %>%
-        mutate(Item = gsub("[.]","", Item)) %>%
-        mutate(Description = iconv(Description, to = 'UTF-8-MAC', sub = '')) %>%
+        mutate(Item = gsub("[.]","", Item),
+               Description = iconv(Description, to = 'UTF-8-MAC', sub = '')) %>%
         mutate(link = paste0(root_link, Item))
 
     cat("itemlist ok")
@@ -186,4 +203,40 @@ get_itemlist  <- function(lnk) {
     try(itemlist %>%
             mutate(img_src = paste0(img_prefix, Item, img_suffix)))
 
+}
+######################################
+#------ FUNCTION: GET_AMAZON --------#
+######################################
+
+## Get amazon information
+get_amazon <- function(description) {
+    description %>%
+        clean_str %>%
+        gsub(" ", "+", .) %>%
+        paste0(amazon_base, .) %>%
+        html %>%
+        html_node(".s-item-container") %>%
+        html_node("a") %>%
+        html_attr("href")
+}
+
+####
+get_amazon_full <- function(description) {
+    url <- description %>%
+        clean_str %>%
+        gsub(" ", "+", .) %>%
+        paste0(amazon_base, .)
+
+    item_1 <- url %>%
+        html %>%
+        html_node(".s-item-container") %>%
+        #        .[1] %>%
+        html_node("a") %>%
+        html_attr("href")
+
+
+    img_src <- item_1 %>% html_nodes("img") %>%
+        html_attr("src")
+
+    price <- item_1 %>% html_node(".s-price") %>% html_text
 }
