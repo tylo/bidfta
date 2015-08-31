@@ -59,9 +59,11 @@ server <- function(input, output, session) {
                         gsub("(Additional Information|MSRP|Retail):.*", "", .) %>%
                         gsub("(\t|\n|\r).*", "", .) %>%
                         gsub(" ", "+", .) %>%
-                        paste0('<br><br><a href="', amazon_base, . ,
+                        paste0('<br><br>',
+                               '<a href="', amazon_base, . ,
                                '" target="_blank"><i class="fa fa-external-link-square fa-lg">
-                                  </i></a>')
+                                  </i></a>'
+                        )
                 )
             ) %>%
             select(Photo, Description, Item, Auction)

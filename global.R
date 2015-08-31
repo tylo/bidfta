@@ -132,7 +132,9 @@ auction_details  <- function(link) {
             html_text %>%
             gsub("\\.", ",", .) %>%
             gsub("(\\d+)(st|nd|rd|th)","\\1", .) %>%
-            strptime("%B %e, %Y %R"))
+            strptime("%B %e, %Y %I:%M %p"))
+
+    #print(class(a$date))
 
     try(a$date %>% paste("|", link) %>% print)
     try(if (is.na(a$date) |
