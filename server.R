@@ -74,7 +74,7 @@ server <- function(input, output, session) {
         phrase = input$searchText
 
         items_df$Description %>%
-            grep(paste0(paste0("(^|\\W)",phrase, "($|\\W)")), ., value = F, ignore.case = T) %>%
+            grepl(phrase, ., ignore.case = T) %>%
             items_df[.,]
     })
 

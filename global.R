@@ -3,7 +3,7 @@
 library(rvest)
 library(dplyr)
 library(knitr)
-library(data.table)
+#library(data.table)
 library(rjson)
 require(parallel)
 
@@ -175,7 +175,7 @@ get_itemlist  <- function(lnk) {
         html_node("#DataTable") %>%
         html_table(header = T) %>%
         mutate(Item = gsub("[.]","", Item),
-               Description = iconv(Description, to = 'UTF-8-MAC', sub = '')) %>%
+               Description = iconv(Description, to = 'UTF-8', sub = '')) %>%
         mutate(link = paste0(root_link, Item))
 
     cat("itemlist ok")
