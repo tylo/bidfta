@@ -1,28 +1,55 @@
 # server.R
 
-if (curtime >= lasttime + auto_refresh_time) {
-    rescrape()
-
-} else {
-    # Filter out auctions that have already passed
-    auctions_df  <- "CSV/auctions.csv" %>%
-        read.csv(stringsAsFactors = F) %>%
-        filter(date > curtime)
-
-    auctions_df$date  <- auctions_df$date %>%
-        strptime(time_file_format) %>%
-        as.POSIXct
-
-
-    # Filter out items from auctions that have passed
-    items_df  <- "CSV/items.csv" %>%
-        read.csv(stringsAsFactors = F) %>%
-        filter(Auction %in% auctions_df$title)
-}
-
 ############ SERVER ##################
 
 server <- function(input, output, session) {
+    
+  # Recording current time and checking timestamp from previously downloaded data
+  
+  curtime  <- Sys.time()
+  lasttime <- try(read.csv("CSV/timestamp.csv", stringsAsFactors = F), silent = T)
+  
+  if (class(lasttime) == "try-error")
+  {
+    lasttime <- curtime  - auto_refresh_time
+    cat("No Scrape History Found", "\n\n")
+    
+  } else {
+    lasttime <- lasttime[,1] %>%
+      strptime(time_file_format) %>%
+      as.POSIXct
+    
+    cat("Last Scrape: ", lasttime, "\n\n")
+  }
+  
+  cat("Current Time: ", format(curtime, time_file_format), "\n")
+  cat("Refresh Due: ",format(lasttime + auto_refresh_time, time_file_format), "\n\n")
+  
+  
+  
+  if (curtime >= lasttime + auto_refresh_time) {
+    rescrape()
+  } 
+  
+  # Filter out auctions that have already passed
+  auctions_df  <- "CSV/auctions.csv" %>%
+    read.csv(stringsAsFactors = F) %>%
+    filter(date > curtime)
+  
+  auctions_df$date  <- auctions_df$date %>%
+    strptime(time_file_format) %>%
+    as.POSIXct
+  
+  
+  # Filter out items from auctions that have passed
+  items_df  <- "CSV/items.csv" %>%
+    read.csv(stringsAsFactors = F) %>%
+    filter(Auction %in% auctions_df$title)
+  
+  
+  
+  
+  
     # Populating the index selector with stuff queried from database
     s_options <- unique(auctions_df$location)
     names(s_options) <- s_options
@@ -31,6 +58,19 @@ server <- function(input, output, session) {
                       selected = NULL)
 
 
+    
+    ######################################
+    #------------------------------------#
+    #------- OUTPUT FUNCTIONS -----------#
+    #------------------------------------#
+    ######################################
+
+    #### OUTPUT: LASTTIME ####
+    output$lasttime <- renderText(
+      lasttime %>% format("%c")
+    )
+        
+    ### OUTPUT: AUCTIONS_DF ###
     output$auctions_df  <- renderDataTable({
         auctions_df %>%
             mutate(title = paste0('<a href="', link, '" target="_blank">',title,'</a>')) %>%
@@ -38,7 +78,7 @@ server <- function(input, output, session) {
     }, escape = F)
 
 
-    ### OUTPUT: SEARCH_DF ####
+    ### OUTPUT: SEARCH_DF ###
     output$search_df  <- renderDataTable({
         if (is.null(search_res()))
             return()

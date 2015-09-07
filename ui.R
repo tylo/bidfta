@@ -6,7 +6,7 @@ ui <- dashboardPage(
   dashboardHeader(title = "FastTrack Bidder",
     dropdownMenu(type = "notifications",
       notificationItem(
-        text = strftime(lasttime, "%a %b %e %H:%M"),
+        text = "Shit is happening",
         icon("calendar")
       )
     )  
@@ -38,10 +38,10 @@ ui <- dashboardPage(
             hr()
             #strong("For now, only the top ~50 items from each auction are scraped :-(")
           ),
-          
+            
           infoBox("Last Scraped", width = 4,
-            strftime(lasttime, "%a, %b %e %H:%M"),
-            icon = icon("calendar"), fill = F, color = "yellow")
+                  textOutput("lasttime"),
+                  icon = icon("calendar"), fill = F, color = "yellow")
         )
       ),
       

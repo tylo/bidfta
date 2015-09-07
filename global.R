@@ -7,32 +7,12 @@ library(knitr)
 library(rjson)
 require(parallel)
 
-auto_refresh_time <- 3600 * 6
-curtime  <- Sys.time()
+auto_refresh_time <- 3600 * 3
 
 # Some constants
 time_file_format  <- "%Y-%m-%d %H:%M:%S"
 amazon_base <- "http://www.amazon.com/s/ref=nb_sb_noss?url=search-alias%3Daps&field-keywords="
 
-# Recording current time and checking timestamp from previously downloaded data
-
-lasttime <- try(read.csv("CSV/timestamp.csv", stringsAsFactors = F), silent = T)
-
-if (class(lasttime) == "try-error")
-{
-    lasttime <- curtime  - auto_refresh_time
-    cat("No Scrape History Found", "\n\n")
-
-} else {
-    lasttime <- lasttime[,1] %>%
-        strptime(time_file_format) %>%
-        as.POSIXct
-
-    cat("Last Scrape: ", lasttime, "\n\n")
-}
-
-cat("Current Time: ", format(curtime, time_file_format), "\n")
-cat("Refresh Due: ",format(lasttime + auto_refresh_time, time_file_format), "\n\n")
 
 ######################################
 #------------------------------------#
@@ -56,8 +36,8 @@ rescrape <- function() {
         gsub("mnlist","mndetails",.) %>%
         sub("/category/ALL","",.)
 
-    Sys.time() %>% paste0("Starting Top Level Scrape: ", .) # Time the 1st retrieval
-
+    # Time the 1st retrieval
+    "|----- GETTING AUCTIONS -----|" %>% cat("\n",., "\n\n")
     ptm <- proc.time()
     system.time(auctions <- link %>%
                     #.[40:60] %>%
@@ -72,7 +52,6 @@ rescrape <- function() {
     #auctions_df %>% head %>% print
 
     #Output time to shell
-    Sys.time() %>% paste0("Ending Top Level Scrape: ", .)
     print(proc.time() - ptm)
 
     # Good locations
@@ -83,8 +62,8 @@ rescrape <- function() {
     auctions_df <- filter(auctions_df, good_loc)
 
     # Get Items
-    "|----- GETTING ITEMS -----|" %>% print
-    print(Sys.time()) # Time the 2nd retrieval
+    "|----- GETTING ITEMS -----|" %>%  cat("\n",., "\n")
+    
     ptm <- proc.time()
 
     items <- auctions_df$link %>%
@@ -93,16 +72,18 @@ rescrape <- function() {
     names(items) <- auctions_df$title
 
     #Output time to shell
-    print(Sys.time())
     print(proc.time() - ptm)
 
     items_df <- items %>%
         do.call(rbind, .) %>%
         mutate(Auction = gsub("\\.[0-9]+","", row.names(.)))
 
-    write.csv(curtime, "CSV/timestamp.csv", row.names = F)
+    write.csv(Sys.time(), "CSV/timestamp.csv", row.names = F)
+    print("done1")
     write.csv(auctions_df, "CSV/auctions.csv", row.names = F)
+    print("done2")
     write.csv(items_df, "CSV/items.csv", row.names = F)
+    print("done3")
 
 }
 
@@ -136,9 +117,9 @@ auction_details  <- function(link) {
 
     #print(class(a$date))
 
-    try(a$date %>% paste("|", link) %>% print)
+    try(a$date %>% paste("|", link) %>% cat("\n"))
     try(if (is.na(a$date) |
-            is.null(a$date) | a$date < curtime)
+            is.null(a$date) | a$date < Sys.time())
         return(NULL))
 
     a$title  <- tmp %>%
@@ -190,7 +171,7 @@ get_itemlist  <- function(lnk) {
             html_node("img") %>%
             html_attr("src"))
 
-    cat(" | img_link ok")
+    cat("|","img_link ok","\n")
 
     try(img_prefix <- img_link %>%
             gsub("/[^/]+$","/",.))
