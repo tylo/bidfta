@@ -2,6 +2,15 @@
 .Rhistory
 .RData
 
+<<<<<<< Updated upstream
 CSV/timestamp.csv
 
+=======
+>>>>>>> Stashed changes
 *.csv
+
+CSV/timestamp.csv
+
+CSV/items.csv
+
+CSV/auctions.csv
