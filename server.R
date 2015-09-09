@@ -3,7 +3,13 @@
 ############ SERVER ##################
 
 server <- function(input, output, session) {
-    
+  
+  ######################################
+  #------------------------------------#
+  #------- RUN ONCE PER SESSION -------#
+  #------------------------------------#
+  ######################################
+  
   # Recording current time and checking timestamp from previously downloaded data
   
   curtime  <- Sys.time()
@@ -19,11 +25,11 @@ server <- function(input, output, session) {
       strptime(time_file_format) %>%
       as.POSIXct
     
-    cat("Last Scrape: ", lasttime, "\n\n")
+    cat("Last Scrape:  ", format(lasttime, time_file_format), "\n")
   }
   
   cat("Current Time: ", format(curtime, time_file_format), "\n")
-  cat("Refresh Due: ",format(lasttime + auto_refresh_time, time_file_format), "\n\n")
+  cat("Refresh Due:  ",format(lasttime + auto_refresh_time, time_file_format), "\n\n")
   
   
   
@@ -40,87 +46,139 @@ server <- function(input, output, session) {
     strptime(time_file_format) %>%
     as.POSIXct
   
-  
   # Filter out items from auctions that have passed
   items_df  <- "CSV/items.csv" %>%
     read.csv(stringsAsFactors = F) %>%
     filter(Auction %in% auctions_df$title)
   
+  # Populating the index selector with stuff queried from database
+  s_options <- unique(auctions_df$location)
+  names(s_options) <- s_options
+  updateSelectInput(session, "locSelect",
+                    choices = s_options,
+                    selected = NULL)
   
-  
-  
-  
-    # Populating the index selector with stuff queried from database
-    s_options <- unique(auctions_df$location)
-    names(s_options) <- s_options
-    updateSelectInput(session, "locSelect",
-                      choices = s_options,
-                      selected = NULL)
 
+  
+  wishlist <- reactiveValues(data = get_wishlist())
+  
 
+  
+  ######################################
+  #------------------------------------#
+  #-------- REACTIVE FUNCTIONS --------#
+  #------------------------------------#
+  ######################################
+
+  #### OBSERVER: WISHLIST OUTPUT ####
+  observeEvent(wishlist$data,  {
     
-    ######################################
-    #------------------------------------#
-    #------- OUTPUT FUNCTIONS -----------#
-    #------------------------------------#
-    ######################################
-
-    #### OUTPUT: LASTTIME ####
-    output$lasttime <- renderText(
-      lasttime %>% format("%c")
+    tmp <- wishlist$data
+    cat("\nWishlist Terms:", tmp %>% paste(collapse = " | "), '\n\n')
+    output$wishlist <- DT::renderDataTable(tmp %>% data.frame,
+                                           rownames = FALSE,
+                                           colnames = "Wishlist",
+                                           #width = "50%",
+                                           server = F,
+                                           options = list(dom = 't',
+                                                          pageLength = 25)
     )
-        
-    ### OUTPUT: AUCTIONS_DF ###
-    output$auctions_df  <- renderDataTable({
-        auctions_df %>%
-            mutate(title = paste0('<a href="', link, '" target="_blank">',title,'</a>')) %>%
-            select(date, title, location)
-    }, escape = F)
+  })
+  
+  #### OBSERVER: ADD BUTTON ####
+  observeEvent(input$add, {
+    
+    print("Clicked: Add")
+    tmp <- input$add_term
+    if (tmp != "") {
+      
+      cat('Adding: ', tmp)
+      wishlist$data <- wishlist$data %>% c(tmp)
+      wishlist$data %>% save_wishlist
+      updateTextInput(session, "add_term",
+                      value = "")
+    }
+  })
+  
+  #### OBSERVER: ADD REMOVE_SELECTED ####
+  observeEvent(input$remove_selected, {
+    
+    print("Clicked: Remove")
+    tmp <- input$wishlist_rows_selected
+    if (!is.null(tmp)) {
+      
+      cat('Removing: ', wishlist$data[tmp] %>% paste(collapse = " | "))
+      wishlist$data <- wishlist$data[-tmp]
+      wishlist$data %>% save_wishlist
+    }
+  })
 
+  
+  
+  ######################################
+  #------------------------------------#
+  #------- OUTPUT FUNCTIONS -----------#
+  #------------------------------------#
+  ######################################
+  
 
-    ### OUTPUT: SEARCH_DF ###
-    output$search_df  <- renderDataTable({
-        if (is.null(search_res()))
-            return()
-
-        search_res() %>%
-            mutate(
-                Photo = paste0(
-                    '<a href="',
-                    link,
-                    '" target="_blank"><img src="',
-                    img_src,
-                    '" class="img-rounded" width="250"/></a>'
-                ),
-                Description = paste0(
-                    Description,
-                    Description %>%
-                        gsub("((Item)? ?Description|Brand): ?", " ", .) %>%
-                        gsub("(Additional Information|MSRP|Retail):.*", "", .) %>%
-                        gsub("(\t|\n|\r).*", "", .) %>%
-                        gsub(" ", "+", .) %>%
-                        paste0('<br><br>',
-                               '<a href="', amazon_base, . ,
-                               '" target="_blank"><i class="fa fa-external-link-square fa-lg">
+  
+  #### OUTPUT: LASTTIME ####
+  output$lasttime <- renderText(
+    lasttime %>% format("%c")
+  )
+  
+  ### OUTPUT: AUCTIONS_DF ###
+  output$auctions_df  <- renderDataTable({
+    auctions_df %>%
+      mutate(title = paste0('<a href="', link, '" target="_blank">',title,'</a>')) %>%
+      select(date, title, location)
+  }, escape = F)
+  
+  
+  ### OUTPUT: SEARCH_DF ###
+  output$search_df  <- renderDataTable({
+    if (is.null(search_res()))
+      return()
+    
+    search_res() %>%
+      mutate(
+        Photo = paste0(
+          '<a href="',
+          link,
+          '" target="_blank"><img src="',
+          img_src,
+          '" class="img-rounded" width="250"/></a>'
+        ),
+        Description = paste0(
+          Description,
+          Description %>%
+            gsub("((Item)? ?Description|Brand): ?", " ", .) %>%
+            gsub("(Additional Information|MSRP|Retail):.*", "", .) %>%
+            gsub("(\t|\n|\r).*", "", .) %>%
+            gsub(" ", "+", .) %>%
+            paste0('<br><br>',
+              '<a href="', amazon_base, . ,
+              '" target="_blank"><i class="fa fa-external-link-square fa-lg">
                                   </i></a>'
-                        )
-                )
-            ) %>%
-            select(Photo, Description, Item, Auction)
-
-    }, escape = F)
-
-    search_res  <- eventReactive(input$searchButton , {
-        phrase = input$searchText
-
-        items_df$Description %>%
-            grepl(phrase, ., ignore.case = T) %>%
-            items_df[.,]
-    })
-
-    observeEvent(input$searchButton, {
-        updateTabItems(session, "tabs", "search")
-    })
-
-
+            )
+        )
+      ) %>%
+      select(Photo, Description, Item, Auction)
+    
+  }, escape = F)
+  
+  search_res  <- eventReactive(input$searchButton , {
+    phrase = input$searchText
+    
+    items_df$Description %>%
+      grepl(phrase, ., ignore.case = T) %>%
+      items_df[.,]
+  })
+  
+  observeEvent(input$searchButton, {
+    updateTabItems(session, "tabs", "search")
+  })
+  
+  
 }

@@ -1,6 +1,7 @@
 # global.R
 
 library(rvest)
+library(DT)
 library(dplyr)
 library(knitr)
 #library(data.table)
@@ -11,6 +12,7 @@ auto_refresh_time <- 3600 * 3
 
 # Some constants
 time_file_format  <- "%Y-%m-%d %H:%M:%S"
+wishlist_loc <- "CSV/wishlist.csv"
 amazon_base <- "http://www.amazon.com/s/ref=nb_sb_noss?url=search-alias%3Daps&field-keywords="
 
 
@@ -19,6 +21,29 @@ amazon_base <- "http://www.amazon.com/s/ref=nb_sb_noss?url=search-alias%3Daps&fi
 #------- HELPER FUNCTIONS -----------#
 #------------------------------------#
 ######################################
+
+######################################
+#------ FUNCTION: GET_WISHLIST ------#
+######################################
+get_wishlist <- function() {
+  
+  read.csv(file = wishlist_loc, 
+           header = T, 
+           stringsAsFactors = F) %>% 
+    .[,1]
+}
+
+######################################
+#------ FUNCTION: SAVE_WISHLIST -----#
+######################################
+save_wishlist <- function(tmp_wishlist) {
+  
+  tmp_wishlist %>% 
+    data.frame  %>% 
+    write.csv(file = wishlist_loc,
+              row.names = FALSE)
+}  
+
 
 ######################################
 #-------- FUNCTION: RESCRAPE --------#
