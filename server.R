@@ -12,7 +12,9 @@ server <- function(input, output, session) {
   
   # Recording current time and checking timestamp from previously downloaded data
   curtime  <- Sys.time()
-  lasttime <- try(read.csv("CSV/timestamp.csv", stringsAsFactors = F), silent = T)
+  lasttime <- try(
+    read.csv("CSV/timestamp.csv", stringsAsFactors = F) %>% unlist,
+    silent = T)
   
   if (class(lasttime) == "try-error")
   {
@@ -20,16 +22,22 @@ server <- function(input, output, session) {
     cat("No Scrape History Found", "\n\n")
     
   } else {
-    lasttime <- lasttime[,1] %>%
+    lasttime <- lasttime %>%
       strptime(time_file_format) %>%
       as.POSIXct
     
-    cat("Last Scrape:  ", format(lasttime, time_file_format), "\n")
+    cat("Last Scrape:  ", format(lasttime, time_file_format, 
+                                 usetz = T, tz = "EST"), 
+        "\n")
   }
   
   # Status Updates
-  cat("Current Time: ", format(curtime, time_file_format), "\n")
-  cat("Refresh Due:  ",format(lasttime + auto_refresh_time, time_file_format), "\n\n")
+  cat("Current Time: ", format(curtime, time_file_format, 
+                               usetz = T, tz = "EST"), 
+      "\n")
+  cat("Refresh Due:  ",format(lasttime + auto_refresh_time, time_file_format, 
+                              usetz = T, tz = "EST"), 
+      "\n\n")
   
   # Rescrape if due time
   if (curtime >= lasttime + auto_refresh_time) {
@@ -122,7 +130,7 @@ server <- function(input, output, session) {
   
   #### OUTPUT: LASTTIME ####
   output$lasttime <- renderText(
-    lasttime %>% format("%a %b %d %I:%H %p")
+    lasttime %>% format("%a %b %d, %I:%M %p", usetz = T, tz = "EST")
   )
   
   #### OUTPUT: NUMAUCTIONS ####
