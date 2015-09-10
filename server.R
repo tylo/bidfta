@@ -11,7 +11,6 @@ server <- function(input, output, session) {
   ######################################
   
   # Recording current time and checking timestamp from previously downloaded data
-  
   curtime  <- Sys.time()
   lasttime <- try(read.csv("CSV/timestamp.csv", stringsAsFactors = F), silent = T)
   
@@ -28,11 +27,11 @@ server <- function(input, output, session) {
     cat("Last Scrape:  ", format(lasttime, time_file_format), "\n")
   }
   
+  # Status Updates
   cat("Current Time: ", format(curtime, time_file_format), "\n")
   cat("Refresh Due:  ",format(lasttime + auto_refresh_time, time_file_format), "\n\n")
   
-  
-  
+  # Rescrape if due time
   if (curtime >= lasttime + auto_refresh_time) {
     rescrape()
   } 
@@ -70,20 +69,20 @@ server <- function(input, output, session) {
   #------------------------------------#
   ######################################
 
-  #### OBSERVER: WISHLIST OUTPUT ####
-  observeEvent(wishlist$data,  {
+  #### REACTIVE: SEARCH_RES ####
+  search_res  <- eventReactive(input$searchButton , {
+    phrase = input$searchText
     
-    tmp <- wishlist$data
-    cat("\nWishlist Terms:", tmp %>% paste(collapse = " | "), '\n\n')
-    output$wishlist <- DT::renderDataTable(tmp %>% data.frame,
-                                           rownames = FALSE,
-                                           colnames = "Wishlist",
-                                           #width = "50%",
-                                           server = F,
-                                           options = list(dom = 't',
-                                                          pageLength = 25)
-    )
+    items_df$Description %>%
+      grepl(phrase, ., ignore.case = T) %>%
+      items_df[.,]
   })
+  
+  #### OBSERVER: SEARCH BUTTON ####
+  observeEvent(input$searchButton, {
+    updateTabItems(session, "tabs", "search")
+  })
+  
   
   #### OBSERVER: ADD BUTTON ####
   observeEvent(input$add, {
@@ -100,7 +99,7 @@ server <- function(input, output, session) {
     }
   })
   
-  #### OBSERVER: ADD REMOVE_SELECTED ####
+  #### OBSERVER: REMOVE_SELECTED BUTTON ####
   observeEvent(input$remove_selected, {
     
     print("Clicked: Remove")
@@ -114,19 +113,43 @@ server <- function(input, output, session) {
   })
 
   
-  
   ######################################
   #------------------------------------#
   #------- OUTPUT FUNCTIONS -----------#
   #------------------------------------#
   ######################################
   
-
   
   #### OUTPUT: LASTTIME ####
   output$lasttime <- renderText(
-    lasttime %>% format("%c")
+    lasttime %>% format("%a %b %d %I:%H %p")
   )
+  
+  #### OUTPUT: NUMAUCTIONS ####
+  output$numauctions <- renderText(
+    auctions_df %>% nrow
+  )
+  
+  #### OUTPUT: NUMAUCTIONS ####
+  output$numauctions <- renderText(
+    auctions_df %>% nrow
+  )
+  
+  #### OUTPUT: WISHLIST OUTPUT ####
+  observeEvent(wishlist$data,  {
+    
+    tmp <- wishlist$data
+    cat("\nWishlist Terms:", tmp %>% paste(collapse = " | "), '\n\n')
+    output$wishlist <- DT::renderDataTable(tmp %>% data.frame,
+                                           rownames = FALSE,
+                                           colnames = "Wishlist",
+                                           #width = "50%",
+                                           server = F,
+                                           options = list(dom = 't',
+                                                          pageLength = 25)
+    )
+  })
+  
   
   ### OUTPUT: AUCTIONS_DF ###
   output$auctions_df  <- renderDataTable({
@@ -167,18 +190,6 @@ server <- function(input, output, session) {
       select(Photo, Description, Item, Auction)
     
   }, escape = F)
-  
-  search_res  <- eventReactive(input$searchButton , {
-    phrase = input$searchText
-    
-    items_df$Description %>%
-      grepl(phrase, ., ignore.case = T) %>%
-      items_df[.,]
-  })
-  
-  observeEvent(input$searchButton, {
-    updateTabItems(session, "tabs", "search")
-  })
   
   
 }
