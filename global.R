@@ -9,6 +9,7 @@ library(rjson)
 require(parallel)
 
 auto_refresh_time <- 3600 * 3
+ending_soon_time <- 3600 * 2
 
 # Some constants
 time_file_format  <- "%Y-%m-%d %H:%M:%S"

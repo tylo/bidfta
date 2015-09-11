@@ -107,11 +107,13 @@ server <- function(input, output, session) {
     }
   })
   
+  
   #### OBSERVER: REMOVE_SELECTED BUTTON ####
   observeEvent(input$remove_selected, {
     
     print("Clicked: Remove")
     tmp <- input$wishlist_rows_selected
+    print(tmp)
     if (!is.null(tmp)) {
       
       cat('Removing: ', wishlist$data[tmp] %>% paste(collapse = " | "))
@@ -133,15 +135,23 @@ server <- function(input, output, session) {
     lasttime %>% format("%a %b %d, %I:%M %p", usetz = T, tz = "EST")
   )
   
-  #### OUTPUT: NUMAUCTIONS ####
-  output$numauctions <- renderText(
-    auctions_df %>% nrow
-  )
   
   #### OUTPUT: NUMAUCTIONS ####
   output$numauctions <- renderText(
     auctions_df %>% nrow
   )
+  
+  
+  #### OUTPUT: ENDINGSOON ####
+  output$endingsoon <- renderText(
+    auctions_df %>% 
+      top_n(1, date) %>%  
+      mutate(pretty_date = format(date, "%I:%M %p", tz = "EST"),
+             pretty_name = gsub(",.*", "", title),
+             pretty = paste(pretty_date, '<br/>', pretty_name)) %>% 
+      select(pretty) %>% unlist %>% HTML
+  )
+  
   
   #### OUTPUT: WISHLIST OUTPUT ####
   observeEvent(wishlist$data,  {
@@ -150,9 +160,11 @@ server <- function(input, output, session) {
     cat("\nWishlist Terms:", tmp %>% paste(collapse = " | "), '\n\n')
     output$wishlist <- DT::renderDataTable(tmp %>% data.frame,
                                            rownames = FALSE,
-                                           colnames = "Wishlist",
+                                           colnames = NULL,
+                                           #style = 'bootstrap',
                                            #width = "50%",
                                            server = F,
+                                           class = 'hover',
                                            options = list(dom = 't',
                                                           pageLength = 25)
     )
@@ -160,11 +172,11 @@ server <- function(input, output, session) {
   
   
   ### OUTPUT: AUCTIONS_DF ###
-  output$auctions_df  <- renderDataTable({
-    auctions_df %>%
-      mutate(title = paste0('<a href="', link, '" target="_blank">',title,'</a>')) %>%
-      select(date, title, location)
-  }, escape = F)
+  output$auctions_df  <- renderDataTable({auctions_df %>%
+                                           mutate(title = paste0('<a href="', link, '" target="_blank">',title,'</a>')) %>%
+                                           select(date, title, location)},
+                                         escape = F
+  )
   
   
   ### OUTPUT: SEARCH_DF ###

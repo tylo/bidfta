@@ -59,18 +59,19 @@ ui <- dashboardPage(skin = "black",
                   icon = icon("calendar"), fill = F, color = "green"
           ),
           infoBox("Local Auctions", width = 4,
-                  #textOutput("lasttime"),
+                  textOutput("numauctions"),
                   icon = icon("calendar"), fill = F, color = "aqua"
           ),
-          infoBox("Other Stuff", width = 4,
-                  #textOutput("lasttime"),
+          infoBox("Ending Soon", width = 4,
+                  textOutput("endingsoon"),
                   icon = icon("calendar"), fill = F, color = "yellow"
           )
         ),
         fluidRow(
           column(8),
           column(4,
-                 box(width = 12,
+                 box(title = "Wishlist",
+                     width = 12,
                      collapsible = TRUE,
                      # Output wishlist
                      DT::dataTableOutput('wishlist'),
