@@ -61,9 +61,12 @@ rescrape <- function() {
     link[fix_these] <- link[fix_these] %>%
         gsub("mnlist","mndetails",.) %>%
         sub("/category/ALL","",.)
+    
+    link <- link[link != '']
 
     # Time the 1st retrieval
     "|----- GETTING AUCTIONS -----|" %>% cat("\n",., "\n\n")
+    #print(link)
     ptm <- proc.time()
     system.time(auctions <- link %>%
                     #.[40:60] %>%
@@ -161,7 +164,7 @@ auction_details  <- function(link) {
     a$link  <- link %>%
         gsub("mndetails","mnlist",.) %>%
         paste0("/category/ALL")
-    #print('ok')
+    #cat("OK\n")
     a
 }
 
