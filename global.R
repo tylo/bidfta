@@ -143,8 +143,7 @@ auction_details  <- function(link) {
             html_text %>%
             gsub("\\.", ",", .) %>%
             gsub("(\\d+)(st|nd|rd|th)","\\1", .) %>%
-            strptime("%B %e, %Y %I:%M %p") %>% 
-            as.POSIXct(tz = "EST")
+            strptime("%B %e, %Y %I:%M %p", tz = 'EST5EDT')
     )
 
     #print(class(a$date))
@@ -162,7 +161,7 @@ auction_details  <- function(link) {
             return(NULL) 
         }
         else {
-            a$date %>% paste %>% cat(" | ", . ,"\n")
+            a$date %>% format(usetz = T) %>% cat(" | ", . ,"\n")
         }
     )
 

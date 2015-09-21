@@ -27,16 +27,16 @@ server <- function(input, output, session) {
       as.POSIXct
     
     cat("Last Scrape:  ", format(lasttime, time_file_format, 
-                                 usetz = T, tz = "EST"), 
+                                 usetz = T, tz = "EST5EDT"), 
         "\n")
   }
   
   # Status Updates
   cat("Current Time: ", format(curtime, time_file_format, 
-                               usetz = T, tz = "EST"), 
+                               usetz = T, tz = "EST5EDT"), 
       "\n")
   cat("Refresh Due:  ",format(lasttime + auto_refresh_time, time_file_format, 
-                              usetz = T, tz = "EST"), 
+                              usetz = T, tz = "EST5EDT"), 
       "\n\n")
   
   # Rescrape if due time
@@ -48,10 +48,11 @@ server <- function(input, output, session) {
   auctions_df  <- "CSV/auctions.csv" %>%
     read.csv(stringsAsFactors = F)
   
+  # Make sure auction expiration has right time zone
   auctions_df$date  <- auctions_df$date %>%
-    strptime(time_file_format) %>%
-    as.POSIXct(tz = "EST")
+    strptime(time_file_format, tz = "EST5EDT")
   
+  # After loading auctions, filter out those which have expired
   auctions_df <- auctions_df %>%
       filter(date > curtime)
   
@@ -134,7 +135,7 @@ server <- function(input, output, session) {
   
   #### OUTPUT: LASTTIME ####
   output$lasttime <- renderText(
-    lasttime %>% format("%a %b %d, %I:%M %p", usetz = T, tz = "EST")
+    lasttime %>% format("%a %b %d, %I:%M %p", usetz = T, tz = "EST5EDT")
   )
   
   
@@ -148,7 +149,7 @@ server <- function(input, output, session) {
   output$endingsoon <- renderText(
       auctions_df %>% 
       top_n(1, desc(date)) %>%  
-      mutate(pretty_date = format(date, "%I:%M %p", tz = "EST"),
+      mutate(pretty_date = format(date, "%I:%M %p", tz = "EST5EDT"),
              pretty_name = gsub(",.*", "", title),
              pretty = paste(pretty_date, pretty_name)) %>% 
       select(pretty) %>% unlist %>% HTML
