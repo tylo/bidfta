@@ -46,12 +46,14 @@ server <- function(input, output, session) {
   
   # Filter out auctions that have already passed
   auctions_df  <- "CSV/auctions.csv" %>%
-    read.csv(stringsAsFactors = F) %>%
-    filter(date > curtime)
+    read.csv(stringsAsFactors = F)
   
   auctions_df$date  <- auctions_df$date %>%
     strptime(time_file_format) %>%
-    as.POSIXct
+    as.POSIXct(tz = "EST")
+  
+  auctions_df <- auctions_df %>%
+      filter(date > curtime)
   
   # Filter out items from auctions that have passed
   items_df  <- "CSV/items.csv" %>%
@@ -144,11 +146,11 @@ server <- function(input, output, session) {
   
   #### OUTPUT: ENDINGSOON ####
   output$endingsoon <- renderText(
-    auctions_df %>% 
-      top_n(1, date) %>%  
+      auctions_df %>% 
+      top_n(1, desc(date)) %>%  
       mutate(pretty_date = format(date, "%I:%M %p", tz = "EST"),
              pretty_name = gsub(",.*", "", title),
-             pretty = paste(pretty_date, '<br/>', pretty_name)) %>% 
+             pretty = paste(pretty_date, pretty_name)) %>% 
       select(pretty) %>% unlist %>% HTML
   )
   

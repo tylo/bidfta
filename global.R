@@ -108,11 +108,11 @@ rescrape <- function() {
         mutate(Auction = gsub("\\.[0-9]+","", row.names(.)))
 
     write.csv(Sys.time(), "CSV/timestamp.csv", row.names = F)
-    print("done1")
+    #print("done1")
     write.csv(auctions_df, "CSV/auctions.csv", row.names = F)
-    print("done2")
+    #print("done2")
     write.csv(items_df, "CSV/items.csv", row.names = F)
-    print("done3")
+    #print("done3")
 
 }
 
@@ -138,18 +138,33 @@ auction_details  <- function(link) {
     tmp <- html(link) %>%
         html_nodes("table tr td")
 
+    cat(link)
     try(a$date  <- tmp[[6]] %>%
             html_text %>%
             gsub("\\.", ",", .) %>%
             gsub("(\\d+)(st|nd|rd|th)","\\1", .) %>%
-            strptime("%B %e, %Y %I:%M %p"))
+            strptime("%B %e, %Y %I:%M %p") %>% 
+            as.POSIXct(tz = "EST")
+    )
 
     #print(class(a$date))
-
-    try(a$date %>% paste("|", link) %>% cat("\n"))
-    try(if (is.na(a$date) |
-            is.null(a$date) | a$date < Sys.time())
-        return(NULL))
+    try(
+        if (is.null(a$date) ) {
+            cat (" | no date\n")
+            return(NULL) 
+        } 
+        else if ( is.na(a$date) ){
+            cat (" | no date\n")
+            return(NULL) 
+        }
+        else if (a$date - Sys.time() < 0 ) {
+            cat (" | expired\n")
+            return(NULL) 
+        }
+        else {
+            a$date %>% paste %>% cat(" | ", . ,"\n")
+        }
+    )
 
     a$title  <- tmp %>%
         html_nodes("#auction_title") %>%
