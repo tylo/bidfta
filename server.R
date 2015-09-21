@@ -50,7 +50,8 @@ server <- function(input, output, session) {
   
   # Make sure auction expiration has right time zone
   auctions_df$date  <- auctions_df$date %>%
-    strptime(time_file_format, tz = "EST5EDT")
+    strptime(time_file_format, tz = "EST5EDT") %>% 
+      as.POSIXct()
   
   # After loading auctions, filter out those which have expired
   auctions_df <- auctions_df %>%
@@ -144,16 +145,29 @@ server <- function(input, output, session) {
     auctions_df %>% nrow
   )
   
-  
   #### OUTPUT: ENDINGSOON ####
-  output$endingsoon <- renderText(
-      auctions_df %>% 
-      top_n(1, desc(date)) %>%  
-      mutate(pretty_date = format(date, "%I:%M %p", tz = "EST5EDT"),
-             pretty_name = gsub(",.*", "", title),
-             pretty = paste(pretty_date, pretty_name)) %>% 
-      select(pretty) %>% unlist %>% HTML
-  )
+  output$endingsoon <- renderInfoBox({
+      auc <- auctions_df %>% 
+          top_n(1, desc(date)) %>% 
+          mutate(pretty_date = format(date, "%I:%M %p", tz = "EST5EDT"),
+                 pretty_name = gsub(",.*", "", title),
+                 pretty = paste(pretty_date, pretty_name)
+          ) 
+      
+      auc_html <- a(auc$pretty, 
+                    href = auc$link,
+                    target="_blank")
+          
+      auc %>% print
+      
+      infoBox(
+          "Ending Soon", 
+          auc_html, 
+          icon = icon("clock-o"),
+          color = "yellow"
+      )
+  })
+  
   
   
   #### OUTPUT: WISHLIST OUTPUT ####

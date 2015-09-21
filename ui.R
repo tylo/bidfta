@@ -58,13 +58,16 @@ ui <- dashboardPage(skin = "black",
                   textOutput("lasttime"),
                   icon = icon("calendar"), fill = F, color = "green"
           ),
+          
+          infoBoxOutput("endingsoon"),
+          
+#           infoBox("Ending Soon", width = 4,
+#                   textOutput("endingsoon"),
+#                   icon = icon("calendar"), fill = F, color = "yellow"
+#           ),
           infoBox("Local Auctions", width = 4,
                   textOutput("numauctions"),
                   icon = icon("calendar"), fill = F, color = "aqua"
-          ),
-          infoBox("Ending Soon", width = 4,
-                  textOutput("endingsoon"),
-                  icon = icon("calendar"), fill = F, color = "yellow"
           )
         ),
         fluidRow(
