@@ -51,7 +51,7 @@ save_wishlist <- function(tmp_wishlist) {
 ######################################
 
 rescrape <- function() {
-    link  <- html("http://bidfta.com/") %>%
+    link  <- read_html("http://bidfta.com/") %>%
         html_nodes(".auction")  %>%
         html_node("a") %>%
         html_attr("href")
@@ -65,11 +65,15 @@ rescrape <- function() {
         gsub("mnlist","mndetails",.) %>%
         sub("/category/ALL","",.)
 
+    
     # Filter out blank links
     link <- link[link != '']
 
     # Filter out links on other auction sites
     bidfta_hosted <- grepl("bidfta", link, ignore.case = T)
+    
+    "total links found" %>% cat(link %>% length,.,"\n")
+    "external auctions removed\n" %>% cat((!bidfta_hosted) %>% sum, .)
     link <- link[bidfta_hosted]
 
     ##### END LINK VALIDATION ################################
@@ -80,26 +84,42 @@ rescrape <- function() {
     "|----- GETTING AUCTIONS -----|" %>% cat("\n",., "\n\n")
     #print(link)
     ptm <- proc.time()
-    system.time(auctions <- link %>%
-                    #.[40:60] %>%
-                    lapply(auction_details) %>%
-                    #mclapply(auction_details, mc.preschedule = F, mc.cores = 4) %>%  #trying multithreaded
-                    .[!sapply(.,is.null)])
+    auctions <- link %>%
+        #.[40:60] %>%
+        lapply(auction_details)
+    
+    # Report how many null auctions
+    auctions %>% sapply(is.null) %>% sum %>% cat("\n",.,"expired or invalid auctions removed\n")
+    
+    auctions <- auctions %>% 
+        #mclapply(auction_details, mc.preschedule = F, mc.cores = 4) %>%  #trying multithreaded
+        .[!sapply(.,is.null)]
 
     auctions_df <- auctions %>%
         lapply(data.frame, stringsAsFactors = FALSE) %>%
         do.call(rbind, .)
 
-    #auctions_df %>% head %>% print
 
     #Output time to shell
     print(proc.time() - ptm)
 
+    
+    
+    #Cleaning locations and eliminating out-of-towners
+    auctions_df$location <- auctions_df$location %>% gsub(" \\d{5}.*","",., ignore.case = T)
+    auctions_df$location %>% table %>% data.frame %>% arrange(desc(Freq)) %>% print
+    
     # Good locations
     good_loc  <- c("Cincinnati", "Sharonville", "West Chester") %>%
-        sapply(function(x)
-            grepl(x, auctions_df$location, ignore.case = T)) %>%
+        sapply(function(x) grepl(x, auctions_df$location, ignore.case = T)) %>%
         apply(1, any)
+    
+    
+    
+    # Report how many auctions in different locations
+    (good_loc) %>% sum %>% cat("\n",.,"local auctions\n")
+    (!good_loc) %>% sum %>% cat("out-of-town auctions removed\n")
+    
     auctions_df <- filter(auctions_df, good_loc)
 
     # Get Items
@@ -147,7 +167,7 @@ clean_str <- function(str) {
 auction_details  <- function(link) {
     a  <- list()
 
-    tmp <- html(link) %>%
+    tmp <- read_html(link) %>%
         html_nodes("table tr td")
 
     cat(link)
@@ -207,7 +227,7 @@ get_itemlist  <- function(lnk) {
 
     itemlist <- root_link %>%
         gsub("mnlist", "mnprint", .) %>%
-        html %>%
+        read_html %>%
         html_node("#DataTable") %>%
         html_table(header = T) %>%
         mutate(Item = gsub("[.]","", Item),
@@ -221,7 +241,7 @@ get_itemlist  <- function(lnk) {
 
     try(img_link <- itemlist$link %>%
             .[n] %>%
-            html %>%
+            read_html %>%
             html_node("#DataTable") %>%
             html_node("img") %>%
             html_attr("src"))
@@ -252,7 +272,7 @@ get_amazon <- function(description) {
         clean_str %>%
         gsub(" ", "+", .) %>%
         paste0(amazon_base, .) %>%
-        html %>%
+        read_html %>%
         html_node(".s-item-container") %>%
         html_node("a") %>%
         html_attr("href")
@@ -266,7 +286,7 @@ get_amazon_full <- function(description) {
         paste0(amazon_base, .)
 
     item_1 <- url %>%
-        html %>%
+        read_html %>%
         html_node(".s-item-container") %>%
         #        .[1] %>%
         html_node("a") %>%

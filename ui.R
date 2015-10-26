@@ -66,8 +66,8 @@ ui <- dashboardPage(skin = "black",
 #                   icon = icon("calendar"), fill = F, color = "yellow"
 #           ),
           infoBox("Local Auctions", width = 4,
-                  textOutput("numauctions"),
-                  icon = icon("calendar"), fill = F, color = "aqua"
+                  icon = icon("calendar"), fill = F, color = "aqua",
+                  textOutput("numauctions")
           )
         ),
         fluidRow(
