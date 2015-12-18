@@ -229,7 +229,7 @@ get_itemlist  <- function(lnk) {
         gsub("mnlist", "mnprint", .) %>%
         read_html %>%
         html_node("#DataTable") %>%
-        html_table(header = T) %>%
+        html_table(header = T, fill = T) %>%
         mutate(Item = gsub("[.]","", Item),
                Description = iconv(Description, to = 'UTF-8', sub = '')) %>%
         mutate(link = paste0(root_link, Item))
@@ -237,7 +237,7 @@ get_itemlist  <- function(lnk) {
     cat(" |","itemlist ok")
     #itemlist %>%  print
 
-    n <- nrow(itemlist) - 5
+    n <- nrow(itemlist) - 1
 
     try(img_link <- itemlist$link %>%
             .[n] %>%
