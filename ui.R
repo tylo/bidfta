@@ -71,7 +71,18 @@ ui <- dashboardPage(skin = "black",
           )
         ),
         fluidRow(
-          column(8),
+            column(8,
+                box(title = "Watching",
+                    width = 12,
+                    collapsible = TRUE,
+                    div(class = "input-group-btn",
+                        actionButton(
+                            "remove_watchlist", label = "", icon = icon("minus-square-o") #class = "btn-info"
+                        )
+                    )
+                )
+                    
+            ),
           column(4,
                  box(title = "Wishlist",
                      width = 12,
@@ -108,12 +119,11 @@ ui <- dashboardPage(skin = "black",
       ),
       tabItem(tabName = "search",
         h2("Search Results"),
-        dataTableOutput(outputId="search_df")
+        DT::dataTableOutput(outputId="search_df")
       ),
       tabItem(tabName = "options",
               h2("Configuration Options")
       )
     )
   )
-  
 )

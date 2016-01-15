@@ -197,7 +197,7 @@ server <- function(input, output, session) {
   
   
   ### OUTPUT: SEARCH_DF ###
-  output$search_df  <- renderDataTable({
+  output$search_df  <- DT::renderDataTable({
     if (is.null(search_res()))
       return()
     
@@ -226,7 +226,10 @@ server <- function(input, output, session) {
       ) %>%
       select(Photo, Description, Item, Auction)
     
-  }, escape = F)
+  }, 
+  options = list(dom = 'liptp'), 
+  escape = F, class = 'hover'
+  )
   
   
 }
