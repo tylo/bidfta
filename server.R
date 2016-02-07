@@ -231,7 +231,7 @@ server <- function(input, output, session) {
   extensions = 'Scroller',
   class = 'hover',
   options = list(dom = 'fritS',
-                 scrollY = 700,
+                 scrollY = 800,
                  scrollCollapse = TRUE)
   )
 }
