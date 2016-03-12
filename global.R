@@ -7,6 +7,7 @@ library(knitr)
 #library(data.table)
 library(rjson)
 require(parallel)
+require(urltools)
 
 auto_refresh_time <- 3600 * 3
 ending_soon_time <- 3600 * 2
@@ -32,6 +33,21 @@ get_wishlist <- function() {
              header = T,
              stringsAsFactors = F) %>%
         .[,1]
+}
+
+
+gen_gcal <- function(event_title, stime, description, loc ) {
+    
+    start_time <- stime %>% strftime(format = "%Y%m%dT%H%M00Z")
+    end_time <- (stime + 30*60) %>% strftime(format = "%Y%m%dT%H%M00Z")
+
+    url <- "https://www.google.com/calendar/render?action=TEMPLATE&text=[description]&dates=[start]&details=[details]&location=[location]" 
+    
+    url %>% 
+        param_set( "text", event_title ) %>% 
+        param_set( "details", description ) %>% 
+        param_set( "location", loc ) %>% 
+        param_set( "dates", paste0( start_time,"/", end_time ))
 }
 
 ######################################
