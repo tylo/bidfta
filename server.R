@@ -234,4 +234,8 @@ server <- function(input, output, session) {
                  scrollY = 800,
                  scrollCollapse = TRUE)
   )
+  
+  observeEvent(input$wrap_whole, 
+               print(input$wrap_whole)
+  )
 }
