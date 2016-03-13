@@ -204,7 +204,7 @@ server <- function(input, output, session) {
       )
 
       search_res() %>%
-          transmute(newcol = gen_pins(Description, img_src)) %>%
+          transmute(newcol = gen_pins( clean_description(Description), img_src )) %>%
           unlist %>%
           paste0( collapse="" ) %>%
           HTML
@@ -226,11 +226,10 @@ server <- function(input, output, session) {
           '" class="img-rounded" width="250"/></a>'
         ),
         Description = paste0(
-          Description,
+          Description %>% clean_description,
           Description %>%
             gsub("((Item)? ?Description|Brand): ?", " ", .) %>%
-            gsub("(Additional Information|MSRP|Retail):.*", "", .) %>%
-            gsub("(\t|\n|\r).*", "", .) %>%
+            clean_description %>%
             gsub(" ", "+", .) %>%
             paste0('<br><br>',
               '<a href="', amazon_base, . ,

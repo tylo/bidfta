@@ -22,7 +22,7 @@ OS.Name <- Sys.info()["sysname"]
 numcores <- parallel::detectCores()
 TOKENIZER_TM = 1 #default tokenizer in TM package
 TOKENIZER_BIGRAM = 2 #bigram tokenizer in RWEKA package
-tokenizer = TOKENIZER_TM
+tokenizer = TOKENIZER_BIGRAM
 
 BigramTokenizer <- function(x) {RWeka::NGramTokenizer(x, RWeka::Weka_control(min = 1, max = 2))}
 ```
@@ -119,7 +119,7 @@ get_terms <- function(tdm_col, num_terms=5) {
        select(terms, val)
 }
 
-tdm[,5] %>% get_terms
+tdm[,5] %>% get_terms(8)
 ```
 
 

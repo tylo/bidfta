@@ -63,6 +63,16 @@ gen_gcal_url <- function(event_title, stime, description, loc ) {
 }
 
 ######################################
+#--- FUNCTION: CLEAN_DESCRIPTION ----#
+######################################
+clean_description <- function(description) {
+    description %>%
+        gsub("(Additional Information|MSRP|Retail):.*", "", .) %>%
+        gsub("(\t|\n|\r).*", "", .)
+}
+
+
+######################################
 #----- FUNCTION: GEN_AMAZON_URL -----#
 ######################################
 amazon_base <- "http://www.amazon.com/s/ref=nb_sb_noss?url=search-alias%3Daps&field-keywords="

@@ -175,7 +175,7 @@ ui <- dashboardPage( skin = "black",
                   h2("Search Results"),
                   tabBox(
                       width = "100%",
-                      selected = "List",
+                      selected = "Pins",
 
                       tabPanel( "Pins",
                                 div( id="wrapper",
