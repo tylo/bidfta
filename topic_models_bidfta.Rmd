@@ -41,11 +41,11 @@ source("~/Google Drive/Ahalogist Toolkit/R/theme_ahalogy.R")
 attach(ahalogy.colors)
 
 # Stopwords removal
-all.stopwords <- read.csv("~/Google Drive/Data Science/stopwords_pinterest.txt", header = F) %>%
+all.stopwords <- read.csv("stopwords_bidfta.csv", header = F, stringsAsFactors = F) %>%
     unlist %>%
-    as.character %>%
-    gsub(" ","",.) %>%
-    union(stopwords(), c("description, item, new, contact, appears"))
+    # gsub(" ","",.) %>%
+    union(stopwords()) #%>% 
+    # union(c("description", "item", "new", "contact", "appears", "condition", "preview", "newitem"))
 
 ```
 
@@ -58,7 +58,17 @@ length(descriptions)
 The descriptions need some cleaning and preprocessing before we can assemble them into a `term-document matrix`
 ```{r Cleaning & Term Document}
 # Fix descriptions and make Corpus
-descriptions <- str_replace_all(descriptions, "[^[:graph:]]", " ")
+rm_pattern <- c("Facebook", "Twitter", "Pinterest", "Load #", "Lotted") %>% 
+    paste0( "\\W\\w*", . , "\\w*(\\W|$)", collapse = "|" ) %>% 
+    paste0( "|Front Page: Click here to go back to Fast Track Auction Home Page" ) %>% 
+    paste0( "|Contact: Please use our contact submission via bidfta.com to submit any questions regarding this auction.") %>% 
+    paste0( "|[Ii]tem" )
+
+descriptions <- descriptions %>% 
+    str_replace_all("[^[:graph:]]", " ") %>% 
+    gsub(rm_pattern, " " , .,  perl = T, ignore.case = FALSE)
+    
+
 myCorpus <- Corpus(VectorSource(descriptions)) %>% 
     tm_map(content_transformer(tolower)) %>% 
     tm_map(removePunctuation) %>% 
@@ -77,6 +87,9 @@ if (tokenizer == TOKENIZER_TM) {
         TermDocumentMatrix(control = list(tokenize = BigramTokenizer))
 }
 
+```
+
+```{r}
 # Remove sparse terms
 tdm <- tdm %>% 
     weightTfIdf %>% 
@@ -94,13 +107,19 @@ term.freq %>% data.frame %>% head(50)
 
 ### RELEVANT WORDS FOR ONE DOC
 ```{r}
-get_terms <- function(tdm_col, num_terms=5, output.names = T ) {
+get_terms <- function(tdm_col, num_terms=5) {
     selected <- tdm_col %>% as.matrix %>% 
         order(decreasing=T) %>% 
         head(num_terms)
         
-    if (output.names) row.names(tdm_col[selected,]) else tdm_col[selected,]
+   tdm_col[selected,] %>% 
+       as.matrix %>% 
+       data.frame(val = as.numeric(.)) %>% 
+       add_rownames("terms") %>% 
+       select(terms, val)
 }
+
+tdm[,5] %>% get_terms
 ```
 
 
