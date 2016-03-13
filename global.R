@@ -15,7 +15,6 @@ ending_soon_time <- 3600 * 2
 # Some constants
 time_file_format  <- "%Y-%m-%d %H:%M:%S"
 wishlist_loc <- "CSV/wishlist.csv"
-amazon_base <- "http://www.amazon.com/s/ref=nb_sb_noss?url=search-alias%3Daps&field-keywords="
 
 
 ######################################
@@ -35,21 +34,6 @@ get_wishlist <- function() {
         .[,1]
 }
 
-
-gen_gcal <- function(event_title, stime, description, loc ) {
-    
-    start_time <- stime %>% strftime(format = "%Y%m%dT%H%M00Z")
-    end_time <- (stime + 30*60) %>% strftime(format = "%Y%m%dT%H%M00Z")
-
-    url <- "https://www.google.com/calendar/render?action=TEMPLATE&text=[description]&dates=[start]&details=[details]&location=[location]" 
-    
-    url %>% 
-        param_set( "text", event_title ) %>% 
-        param_set( "details", description ) %>% 
-        param_set( "location", loc ) %>% 
-        param_set( "dates", paste0( start_time,"/", end_time ))
-}
-
 ######################################
 #------ FUNCTION: SAVE_WISHLIST -----#
 ######################################
@@ -59,6 +43,51 @@ save_wishlist <- function(tmp_wishlist) {
         data.frame  %>%
         write.csv(file = wishlist_loc,
                   row.names = FALSE)
+}
+
+
+######################################
+#------ FUNCTION: GEN_GCAL_URL ------#
+######################################
+gcal_base <- "https://www.google.com/calendar/render?action=TEMPLATE&text=[description]&dates=[start]&details=[details]&location=[location]"
+gen_gcal_url <- function(event_title, stime, description, loc ) {
+
+    start_time <- stime %>% strftime(format = "%Y%m%dT%H%M00Z")
+    end_time <- (stime + 30*60) %>% strftime(format = "%Y%m%dT%H%M00Z")
+
+    gcal_base %>%
+        param_set( "text", event_title ) %>%
+        param_set( "details", description ) %>%
+        param_set( "location", loc ) %>%
+        param_set( "dates", paste0( start_time,"/", end_time ))
+}
+
+######################################
+#----- FUNCTION: GEN_AMAZON_URL -----#
+######################################
+amazon_base <- "http://www.amazon.com/s/ref=nb_sb_noss?url=search-alias%3Daps&field-keywords="
+gen_amazon_url <- function(description) {
+
+    description %>%
+        gsub("((Item)? ?Description|Brand): ?", " ", .) %>%
+        gsub("(Additional Information|MSRP|Retail):.*", "", .) %>%
+        gsub("(\t|\n|\r).*", "", .) %>%
+        gsub(" ", "+", .) %>%
+        paste0('<a href="', amazon_base, . ,
+               '" target="_blank"><i class="fa fa-external-link-square fa-lg"></i></a>'
+        )
+}
+
+
+######################################
+#--------- FUNCTION: GEN_PINS -------#
+######################################
+pin_html <- '<div class="pin box"><img src="%s"/><p>%s</p></div>'
+gen_pins <- function( description, img_url,
+                      auction_end="", location="", gcal_url="", amazon_url ="" ) {
+
+    pin_html %>% sprintf( img_url, description)
+
 }
 
 
@@ -81,13 +110,13 @@ rescrape <- function() {
         gsub("mnlist","mndetails",.) %>%
         sub("/category/ALL","",.)
 
-    
+
     # Filter out blank links
     link <- link[link != '']
 
     # Filter out links on other auction sites
     bidfta_hosted <- grepl("bidfta", link, ignore.case = T)
-    
+
     "total links found" %>% cat(link %>% length,.,"\n")
     "external auctions removed\n" %>% cat((!bidfta_hosted) %>% sum, .)
     link <- link[bidfta_hosted]
@@ -103,11 +132,11 @@ rescrape <- function() {
     auctions <- link %>%
         #.[40:60] %>%
         lapply(auction_details)
-    
+
     # Report how many null auctions
     auctions %>% sapply(is.null) %>% sum %>% cat("\n",.,"expired or invalid auctions removed\n")
-    
-    auctions <- auctions %>% 
+
+    auctions <- auctions %>%
         #mclapply(auction_details, mc.preschedule = F, mc.cores = 4) %>%  #trying multithreaded
         .[!sapply(.,is.null)]
 
@@ -119,23 +148,23 @@ rescrape <- function() {
     #Output time to shell
     print(proc.time() - ptm)
 
-    
-    
+
+
     #Cleaning locations and eliminating out-of-towners
     auctions_df$location <- auctions_df$location %>% gsub(" \\d{5}.*","",., ignore.case = T)
     auctions_df$location %>% table %>% data.frame %>% arrange(desc(Freq)) %>% print
-    
+
     # Good locations
     good_loc  <- c("Cincinnati", "Sharonville", "West Chester") %>%
         sapply(function(x) grepl(x, auctions_df$location, ignore.case = T)) %>%
         apply(1, any)
-    
-    
-    
+
+
+
     # Report how many auctions in different locations
     (good_loc) %>% sum %>% cat("\n",.,"local auctions\n")
     (!good_loc) %>% sum %>% cat("out-of-town auctions removed\n")
-    
+
     auctions_df <- filter(auctions_df, good_loc)
 
     # Get Items
@@ -247,7 +276,7 @@ get_itemlist  <- function(lnk) {
         html_node("#DataTable") %>%
         html_table(header = T, fill = T) %>%
         mutate(Item = gsub("[.]","", Item),
-               Description = iconv(Description, to = 'UTF-8', sub = '')) %>%
+               Description = iconv(Description, to = 'UTF-8', sub = ' ')) %>%
         mutate(link = paste0(root_link, Item))
 
     cat(" |","itemlist ok")

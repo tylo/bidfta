@@ -83,11 +83,12 @@ server <- function(input, output, session) {
 
   #### REACTIVE: SEARCH_RES ####
   search_res  <- eventReactive(input$searchButton , {
-    phrase = input$searchText
 
-    items_df$Description %>%
-      grepl(phrase, ., ignore.case = T) %>%
-      items_df[.,]
+      input$searchText %>%
+          ifelse( input$wrap_whole, paste0( "\\W",.,'\\W' ), . ) %>%
+          print %>%
+          grepl( items_df$Description, ignore.case = T ) %>%
+          items_df[.,]
   })
 
   #### OBSERVER: SEARCH BUTTON ####
@@ -196,6 +197,20 @@ server <- function(input, output, session) {
   )
 
 
+  ### OUTPUT: PINS_DIV ###
+  output$pins_div <- renderUI({
+      validate(
+          need( search_res(), "Hello")
+      )
+
+      search_res() %>%
+          transmute(newcol = gen_pins(Description, img_src)) %>%
+          unlist %>%
+          paste0( collapse="" ) %>%
+          HTML
+  })
+
+
   ### OUTPUT: SEARCH_DF ###
   output$search_df  <- DT::renderDataTable({
     if (is.null(search_res()))
@@ -234,8 +249,10 @@ server <- function(input, output, session) {
                  scrollY = 800,
                  scrollCollapse = TRUE)
   )
-  
-  observeEvent(input$wrap_whole, 
-               print(input$wrap_whole)
-  )
+
+  # User logging if checkbox is enabled for wrap_whole
+  observeEvent( input$wrap_whole, {
+      var <- "wrap_whole"
+      cat( var, ":", input %>% .[[var]], "\n" )
+  })
 }

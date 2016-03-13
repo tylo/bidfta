@@ -1,0 +1,222 @@
+---
+title: "Summarizing Auctions & Items on Fast-Track"
+people: "and stuff"
+author: "Eugene"
+date: "`r format(Sys.time(), '%B %e, %Y')`"
+output:
+  html_document: 
+    css: ~/Ahalogy/R/style.css
+    highlight: tango
+    theme: null
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(cache=T, fig.width=6.5, fig.height=6.5, 
+                      fig.path='Figs/', warning=FALSE, message=FALSE)
+```
+
+***
+## Getting things set up
+```{r Parameters}
+OS.Name <- Sys.info()["sysname"]
+numcores <- parallel::detectCores()
+TOKENIZER_TM = 1 #default tokenizer in TM package
+TOKENIZER_BIGRAM = 2 #bigram tokenizer in RWEKA package
+tokenizer = TOKENIZER_TM
+
+BigramTokenizer <- function(x) {RWeka::NGramTokenizer(x, RWeka::Weka_control(min = 1, max = 2))}
+```
+
+```{r Initialization}
+require(dplyr)
+require(ggplot2)
+require(knitr)
+require(tm)
+library(stringr)
+library(topicmodels)
+library(wordcloud)
+library(data.table)
+library(tagcloud)
+source("~/Google Drive/Ahalogist Toolkit/R/theme_ahalogy.R")
+attach(ahalogy.colors)
+
+# Stopwords removal
+all.stopwords <- read.csv("~/Google Drive/Data Science/stopwords_pinterest.txt", header = F) %>%
+    unlist %>%
+    as.character %>%
+    gsub(" ","",.) %>%
+    union(stopwords(), c("description, item, new, contact, appears"))
+
+```
+
+We read in a flat file of a few thousand item descriptions
+```{r Reading Data}
+descriptions <- fread("CSV/items.csv") %>% .[["Description"]]
+length(descriptions)
+```
+
+The descriptions need some cleaning and preprocessing before we can assemble them into a `term-document matrix`
+```{r Cleaning & Term Document}
+# Fix descriptions and make Corpus
+descriptions <- str_replace_all(descriptions, "[^[:graph:]]", " ")
+myCorpus <- Corpus(VectorSource(descriptions)) %>% 
+    tm_map(content_transformer(tolower)) %>% 
+    tm_map(removePunctuation) %>% 
+    tm_map(removeNumbers) %>% 
+    tm_map(removeWords, all.stopwords)
+```
+
+## Keyword Extraction
+```{r Keywords}
+# Tokenizing the documents and creating a Term-Document Matrix
+if (tokenizer == TOKENIZER_TM) {
+    tdm <- myCorpus %>% TermDocumentMatrix } else if (tokenizer == TOKENIZER_BIGRAM) {
+    # Have to set cores = 1 because Weka blows
+    options(mc.cores = 1)
+    tdm <- myCorpus %>%
+        TermDocumentMatrix(control = list(tokenize = BigramTokenizer))
+}
+
+# Remove sparse terms
+tdm <- tdm %>% 
+    weightTfIdf %>% 
+    removeSparseTerms(.999)
+tdm
+```
+
+We've removed __sparse__ terms (i.e. those that occur in just a tiny percentage of documents), and here's what's left.
+```{r Frequent Terms}
+term.freq <- rowSums(as.matrix(tdm)) %>% 
+    sort(decreasing= T)
+term.freq %>% data.frame %>% head(50)
+```
+
+
+### RELEVANT WORDS FOR ONE DOC
+```{r}
+get_terms <- function(tdm_col, num_terms=5, output.names = T ) {
+    selected <- tdm_col %>% as.matrix %>% 
+        order(decreasing=T) %>% 
+        head(num_terms)
+        
+    if (output.names) row.names(tdm_col[selected,]) else tdm_col[selected,]
+}
+```
+
+
+### Word Cloud
+```{r Tagcloud function, echo = FALSE}
+outputTagcloud <- function(term.freq, cloud_terms) {
+  
+  #font.vec  <- paste0("Helvetica Neue",c(" Bold", " Medium", "", " Light", " Thin"))
+  font.vec  <- c("FuturaLT-Bold", rep("FuturaLT-Book", 4))
+  
+  if (length(term.freq) > cloud_terms) {
+    term.freq <- term.freq[1:cloud_terms]
+    }
+  
+  bucket  <- ntile(-sqrt(term.freq), 5)
+  
+  tagcloud(names(term.freq), term.freq, 
+    algorithm = "fill",
+    scale.multiplier = 1.35,
+    family = font.vec[bucket], 
+    fvert= 0.3,
+    col = blue_light
+    #col = smoothPalette( term.freq, pal= "Blues", n = 3)
+    )
+  }
+```
+
+```{r Plot Tagcloud}
+outputTagcloud(term.freq, 200)
+```
+
+
+## Topic Modeling
+Now we run Latent Direchlet Allocation (`LDA`) to associate every description with one or more topics. This method requires us to choose the __total__ number of topics ahead of time.
+```{r LDA}
+#Number of topics
+k <- 30
+
+#Set parameters for Gibbs sampling
+alpha <- .1
+verbose <- 250
+burnin <- 4000
+iter <- 2000
+thin <- 500
+seed <-list(2003,5,63,100001,765)
+nstart <- 5
+best <- TRUE
+
+dtm <- as.DocumentTermMatrix(tdm)
+empty.docs  <- (rowSums(as.matrix(dtm)) == 0)
+table(empty.docs)
+dtm <- dtm[rowSums(as.matrix(dtm)) != 0,]
+    
+ptm <- proc.time()
+cat("Running LDA for", k, "topics ... ")
+LDA.output <- LDA(dtm, k, method = "Gibbs", 
+                  control=list(nstart = nstart, seed = seed, best = best, 
+                               burnin = burnin, iter = iter, thin=thin,
+                               verbose = verbose, alpha = alpha))
+cat((proc.time() - ptm)[["elapsed"]],"seconds\n")
+```
+
+The output of this LDA model contains a bunch of stuff, including the assignment of descriptions to topics (function `topics`), the probabilistic interpretation of a topic as a collection of underlying terms (function `terms`), 
+
+Let's look at how the algorithm allocates our pin descriptions among the 30 topics. In effect, this is _clustering_.
+
+### LDA: Allocation of pin descriptions by Topic
+```{r Topics}
+topics <- LDA.output %>% topics
+table(topics)
+qplot(topics, binwidth = 1) + 
+    theme_ahalogy() +
+    scale_x_discrete(limits = c(1:k)) +
+    xlab("Topic ID") + ylab("Count of Descriptions in Topic")
+```
+
+
+### Top 6 Terms for Each topic
+
+```{r kable Splitter, echo = F}
+kable_split <- function(df, newcols = 5) {
+    
+    groups <- ncol(df) / newcols
+    for (i in (1:groups) * newcols) {
+        df[,(i-newcols + 1):i] %>% kable %>% print
+    }
+}
+```
+
+
+```{r}
+terms <- LDA.output %>% terms(10)
+kable_split(terms, 5)
+```
+
+
+### Probabilities Associated with Each Topic Assignment per doc
+
+Here is the distribution for the first 30 documents
+```{r}
+gamma <- LDA.output@gamma %>% data.frame
+gamma %>% head(30)%>% round(3)
+
+LDA.output@gamma  %>% head(30) %>% t %>% barplot
+#LDA.output@gamma  %>% head(30) %>% rowSums()
+```
+
+
+```{r}
+gamma2 <- gamma %>% cbind(doc = rownames(.),  .) %>% head(50)%>% melt 
+
+ggplot(gamma2, aes(x = factor(doc, levels = paste0(1:50)), y = value, fill = variable))+
+    geom_bar(stat = "identity", position = "stack") +
+    labs(title = "Composition of Documents by Topic", 
+         x = "Document #",
+         y = "% by Topic") +
+    coord_flip() + scale_fill_brewer(palette = "Set3")
+```
+
