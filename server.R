@@ -141,7 +141,7 @@ server <- function(input, output, session) {
   )
 
   #### OUTPUT: ENDINGSOON ####
-  output$endingsoon <- renderInfoBox({
+  output$endingsoon <- renderUI({
       auc <- auctions_df %>%
           top_n(1, desc(date)) %>%
           mutate(pretty_date = format(date, "%I:%M %p", tz = "EST5EDT"),
@@ -149,18 +149,7 @@ server <- function(input, output, session) {
                  pretty = paste(pretty_date, pretty_name)
           )
 
-      auc_html <- a(auc$pretty,
-                    href = auc$link,
-                    target="_blank")
-
-      auc %>% print
-
-      infoBox(
-          "Ending Soon",
-          auc_html,
-          icon = icon("clock-o"),
-          color = "yellow"
-      )
+      a(auc$pretty, href = auc$link, target="_blank")
   })
 
 

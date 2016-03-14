@@ -106,22 +106,17 @@ ui <- dashboardPage( skin = "black",
                                    )
                       ),
                       br(),
-
-
+                      infoBox("Ending Soon", width = 5,
+                              icon = icon("clock-o"), fill = F, color = "yellow",
+                              uiOutput("endingsoon")
+                      ),
+                      infoBox("Local Auctions", width = 3,
+                              icon = icon("calendar"), fill = F, color = "aqua",
+                              textOutput("numauctions")
+                      ),
                       infoBox("Last Scraped", width = 4,
                               textOutput("lasttime"),
                               icon = icon("calendar"), fill = F, color = "green"
-                      ),
-
-                      infoBoxOutput("endingsoon"),
-
-                      #           infoBox("Ending Soon", width = 4,
-                      #                   textOutput("endingsoon"),
-                      #                   icon = icon("calendar"), fill = F, color = "yellow"
-                      #           ),
-                      infoBox("Local Auctions", width = 4,
-                              icon = icon("calendar"), fill = F, color = "aqua",
-                              textOutput("numauctions")
                       )
                   ),
                   fluidRow(
