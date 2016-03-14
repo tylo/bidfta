@@ -45,16 +45,10 @@ server <- function(input, output, session) {
   }
 
   # Filter out auctions that have already passed
-  auctions_df  <- "CSV/auctions.csv" %>%
-    read.csv(stringsAsFactors = F)
-
   # Make sure auction expiration has right time zone
-  auctions_df$date  <- auctions_df$date %>%
-    strptime(time_file_format, tz = "EST5EDT") %>%
-      as.POSIXct()
-
   # After loading auctions, filter out those which have expired
-  auctions_df <- auctions_df %>%
+  auctions_df  <-  read.csv( "CSV/auctions.csv", stringsAsFactors = F) %>%
+      mutate( date =  strptime(date, time_file_format, tz = "EST5EDT") %>% as.POSIXct ) %>%
       filter(date > curtime)
 
   # Filter out items from auctions that have passed
@@ -200,14 +194,15 @@ server <- function(input, output, session) {
   ### OUTPUT: PINS_DIV ###
   output$pins_div <- renderUI({
       validate(
-          need( search_res(), "Hello")
+          need( nrow(search_res())>0, "No results")
       )
 
       search_res() %>%
+          left_join(auctions_df, by=c("Auction"="title")) %>%
           transmute(newcol = gen_pins( clean_description(Description),
-                                       link,
-                                       img_src )
-          ) %>%
+                                       link.x,
+                                       img_src,
+                                       date))%>%
           unlist %>%
           paste0( collapse="" ) %>%
           HTML

@@ -45,21 +45,15 @@ save_wishlist <- function(tmp_wishlist) {
                   row.names = FALSE)
 }
 
-
 ######################################
-#------ FUNCTION: GEN_GCAL_URL ------#
+#------- FUNCTION: CLEAN_STR --------#
 ######################################
-gcal_base <- "https://www.google.com/calendar/render?action=TEMPLATE&text=[description]&dates=[start]&details=[details]&location=[location]"
-gen_gcal_url <- function(event_title, stime, description, loc ) {
 
-    start_time <- stime %>% strftime(format = "%Y%m%dT%H%M00Z")
-    end_time <- (stime + 30*60) %>% strftime(format = "%Y%m%dT%H%M00Z")
-
-    gcal_base %>%
-        param_set( "text", event_title ) %>%
-        param_set( "details", description ) %>%
-        param_set( "location", loc ) %>%
-        param_set( "dates", paste0( start_time,"/", end_time ))
+clean_str <- function(str) {
+    str %>%
+        gsub("[\t\n\r\v\f]", " ", .) %>%
+        gsub(" +"," ",.) %>%
+        gsub("^\\s+|\\s+$", "", .)
 }
 
 ######################################
@@ -71,6 +65,16 @@ clean_description <- function(description) {
         gsub("(\t|\n|\r).*", "", .)
 }
 
+######################################
+#------- FUNCTION: GEN_TITLE --------#
+######################################
+gen_title <- function(description, num_words=3) {
+    gsub(".*Description: ","", description) %>%
+        strsplit(" ") %>%
+        sapply(function(x) x[1:num_words] %>% paste0(collapse = " ")  )
+
+}
+
 
 ######################################
 #----- FUNCTION: GEN_AMAZON_URL -----#
@@ -80,23 +84,57 @@ gen_amazon_url <- function(description) {
 
     description %>%
         gsub("((Item)? ?Description|Brand): ?", " ", .) %>%
-        gsub("(Additional Information|MSRP|Retail):.*", "", .) %>%
+        clean_description %>%
         gsub("(\t|\n|\r).*", "", .) %>%
-        gsub(" ", "+", .) %>%
-        paste0('<a href="', amazon_base, . ,
-               '" target="_blank"><i class="fa fa-external-link-square fa-lg"></i></a>'
-        )
+        gsub(" +", "+", .) %>%
+        paste0(amazon_base, . )
+}
+
+######################################
+#------ FUNCTION: GEN_GCAL_URL ------#
+######################################
+gcal_base <- "https://www.google.com/calendar/render?action=TEMPLATE&text=[description]&dates=[start]&details=[details]&location=[location]"
+gen_gcal_url <- function(event_title, stime, description, loc="" ) {
+
+    start_time <- (stime - 30*60) %>% strftime(format = "%Y%m%dT%H%M00Z", tz="UTC" )
+    end_time <- stime %>% strftime(format = "%Y%m%dT%H%M00Z", tz="UTC")
+
+    gcal_base %>%
+        rep_len( length( event_title ) ) %>%
+        param_set( "text", event_title ) %>%
+        param_set( "details", description ) %>%
+        param_set( "location", loc ) %>%
+        param_set( "dates", paste0( start_time,"/", end_time ))
 }
 
 
 ######################################
 #--------- FUNCTION: GEN_PINS -------#
 ######################################
-pin_html <- '<div class="pin box"><a href="%s" target="_blank"><img src="%s"/></a><p>%s</p></div>'
+pin_html <-
+'<div class="pin box box-info">
+    <div class="box-header with-border">
+        <h3 class="box-title">%s</h3></div>
+    <div class="box-body">
+        <a href="%s" target="_blank"><img src="%s"/></a>
+        <p>%s</p></div>
+    <div class="box-footer text-center no-padding">
+        <div class="box-tools">
+            <a href="%s" class="btn btn-box-tool" target="_blank"><i class="fa fa-amazon"></i></a>
+            <a href="%s" class="btn btn-box-tool" target="_blank"><i class="fa fa-calendar-plus-o"></i></a>
+        </div></div>
+</div>'
 gen_pins <- function( description, item_url, img_url,
-                      auction_end="", location="", gcal_url="", amazon_url ="" ) {
+                      auction_end="", location="") {
 
-    pin_html %>% sprintf( item_url, img_url, description)
+
+    title <- gen_title( description, 5) # short title for the pin
+    amazon_url <- gen_amazon_url ( description ) # create amazon url
+    gcal_url <- gen_gcal_url( paste("Bid:", title ), auction_end , item_url)
+
+    pin_html %>% sprintf( auction_end %>% strftime( format = "%a %r"),
+                          item_url, img_url,  description, amazon_url, gcal_url
+    )
 
 }
 
@@ -191,8 +229,8 @@ rescrape <- function() {
     print(proc.time() - ptm)
 
     items_df <- items %>%
-        do.call(rbind, .) %>%
-        mutate(Auction = gsub("\\.[0-9]+","", row.names(.)))
+        do.call( rbind, . ) %>%
+        mutate( Auction = gsub("\\.[0-9]+","", row.names(.)) )
 
     write.csv(Sys.time(), "CSV/timestamp.csv", row.names = F)
     #print("done1")
@@ -203,16 +241,6 @@ rescrape <- function() {
 
 }
 
-######################################
-#------- FUNCTION: CLEAN_STR --------#
-######################################
-
-clean_str <- function(str) {
-    str %>%
-        gsub("[\t\n\r\v\f]", " ", .) %>%
-        gsub(" +"," ",.) %>%
-        gsub("^\\s+|\\s+$", "", .)
-}
 
 ######################################
 #----- FUNCTION: AUCTION_DETAILS ----#
@@ -285,8 +313,8 @@ get_itemlist  <- function(lnk) {
         read_html %>%
         html_node("#DataTable") %>%
         html_table(header = T, fill = T) %>%
-        mutate(Item = gsub("[.]","", Item),
-               Description = iconv(Description, to = 'UTF-8', sub = ' ')) %>%
+        mutate( Item = gsub("[.]","", Item),
+                Description = iconv(Description, to = 'UTF-8', sub = ' ')) %>%
         mutate(link = paste0(root_link, Item))
 
     cat(" |","itemlist ok")
@@ -316,40 +344,4 @@ get_itemlist  <- function(lnk) {
     try(itemlist %>%
             mutate(img_src = paste0(img_prefix, Item, img_suffix)))
 
-}
-######################################
-#------ FUNCTION: GET_AMAZON --------#
-######################################
-
-## Get amazon information
-get_amazon <- function(description) {
-    description %>%
-        clean_str %>%
-        gsub(" ", "+", .) %>%
-        paste0(amazon_base, .) %>%
-        read_html %>%
-        html_node(".s-item-container") %>%
-        html_node("a") %>%
-        html_attr("href")
-}
-
-####
-get_amazon_full <- function(description) {
-    url <- description %>%
-        clean_str %>%
-        gsub(" ", "+", .) %>%
-        paste0(amazon_base, .)
-
-    item_1 <- url %>%
-        read_html %>%
-        html_node(".s-item-container") %>%
-        #        .[1] %>%
-        html_node("a") %>%
-        html_attr("href")
-
-
-    img_src <- item_1 %>% html_nodes("img") %>%
-        html_attr("src")
-
-    price <- item_1 %>% html_node(".s-price") %>% html_text
 }

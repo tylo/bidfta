@@ -125,44 +125,41 @@ ui <- dashboardPage( skin = "black",
                       )
                   ),
                   fluidRow(
-                      column(8,
-                             box(title = "Watching",
-                                 width = 12,
-                                 collapsible = TRUE,
-                                 div(class = "input-group-btn",
-                                     actionButton(
-                                         "remove_watchlist", label = "", icon = icon("minus-square-o") #class = "btn-info"
-                                     )
-                                 )
-                             )
-
+                      box(title = "Watching",
+                          # class="col-xs-12 col-sm-6 col-lg-8",
+                          width = 8,
+                          collapsible = TRUE,
+                          div(class = "input-group-btn",
+                              actionButton(
+                                  "remove_watchlist", label = "", icon = icon("minus-square-o") #class = "btn-info"
+                              )
+                          )
                       ),
-                      column(4,
-                             box(title = "Wishlist",
-                                 width = 12,
-                                 collapsible = TRUE,
-                                 # Output wishlist
-                                 DT::dataTableOutput('wishlist'),
-                                 br(),
-                                 # Add term / remove selected
-                                 div(class = "input-group",
-                                     tags$input(
-                                         id = "add_term",
-                                         type = "text",
-                                         class = "form-control",
-                                         placeholder = "Add term"
-                                     ),
+                      box(title = "Wishlist",
+                          # class = "col-xs-6 col-lg-4",
+                          width = 4,
+                          collapsible = TRUE,
+                          # Output wishlist
+                          DT::dataTableOutput('wishlist'),
+                          br(),
+                          # Add term / remove selected
+                          div(class = "input-group",
+                              tags$input(
+                                  id = "add_term",
+                                  type = "text",
+                                  class = "form-control",
+                                  placeholder = "Add term"
+                              ),
 
-                                     div(class = "input-group-btn",
-                                         actionButton(
-                                             "add", label = "", icon = icon("plus-square-o") #class = "btn-info"
-                                         ),
-                                         actionButton(
-                                             "remove_selected", label = "", icon = icon("minus-square-o") #class = "btn-info"
-                                         )
-                                     )
-                                 )
-                             )
+                              div(class = "input-group-btn",
+                                  actionButton(
+                                      "add", label = "", icon = icon("plus-square-o") #class = "btn-info"
+                                  ),
+                                  actionButton(
+                                      "remove_selected", label = "", icon = icon("minus-square-o") #class = "btn-info"
+                                  )
+                              )
+                          )
                       )
                   )
           ),
@@ -186,6 +183,25 @@ ui <- dashboardPage( skin = "black",
                       ),
                       tabPanel( "List",
                                 DT::dataTableOutput(outputId="search_df")
+                      ),
+                      tabPanel( "Modal",
+                                '<a class="btn btn-default"
+                                    data-toggle="modal"
+                                    data-keyboard="true"
+                                    data-target="#bidfta_modal"
+                                    href="http://www.google.com">Click to open Modal</a>
+                                <div class="modal fade" id="bidfta_modal"
+                                    tabindex="-1" role="dialog">
+                                    <div class="modal-dialog modal-lg">
+                                        <div class="modal-content">
+                                            <div class="modal-body">
+                                                <p>One fine body…</p>
+                                            </div>
+                                        </div>
+                                        <!-- /.modal-content -->
+                                    </div>
+                                    <!-- /.modal-dialog -->
+                                </div>' %>% HTML
                       )
                   )
           )

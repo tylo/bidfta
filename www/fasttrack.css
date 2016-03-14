@@ -2,26 +2,38 @@
   font-size: 16px;
 }
 
+.box-title {
+    font-size: 15px;
+}
+
+/*.box-header {
+    height: 14px;
+}*/
+
+.nav-tabs-custom div.tab-content {
+    background-color: #ecf0f5;
+}
+
 body {
 	background: url(http://subtlepatterns.com/patterns/scribble_light.png) ;
 }
 
 #wrapper {
-	width: 95%;
+	width: 100%;
 	max-width: 1100px;
 	min-width: 800px;
-	margin: 50px auto;
+	margin: 25px auto;
 }
 
 #columns {
 	-webkit-column-count: 3;
-	-webkit-column-gap: 15px;
+	-webkit-column-gap: 20px;
 	-webkit-column-fill: auto;
 	-moz-column-count: 3;
-	-moz-column-gap: 15px;
+	-moz-column-gap: 20px;
 	-moz-column-fill: auto;
 	column-count: 3;
-	column-gap: 20px;
+	column-gap: 25px;
 	column-fill: auto;
 }
 
@@ -30,10 +42,10 @@ body {
 	-webkit-column-break-inside: avoid;
 	-moz-column-break-inside: avoid;
 	column-break-inside: avoid;
-	padding-bottom: 5px;
-	margin: 0 2px 15px;
-	padding: 15px;
+	margin: 0 2px 25px;
 	/*
+	padding-bottom: 5px;
+	padding: 15px;
     background: #FEFEFE;
 	background: -webkit-linear-gradient(45deg, #FFF, #F9F9F9);
 	opacity: 1;
@@ -49,15 +61,9 @@ body {
 
 .pin img {
 	width: 100%;
-	border-bottom: 1px solid #ccc;
-	padding-bottom: 15px;
+	border-bottom: 1px solid RGB(244,244,244);
+	padding-bottom: 10px;
 	margin-bottom: 5px;
-}
-
-.pin p {
-	font: 12px/18px Arial, sans-serif;
-	color: #333;
-	margin: 0;
 }
 
 @media (min-width: 960px) {
