@@ -67,8 +67,19 @@ ui <- dashboardPage( skin = "black",
   ),
 
   dashboardSidebar(
-    sidebarSearchForm(textId = "searchText", buttonId = "searchButton",
-      label = "Search..."),
+      # Search bar
+      tags$form( class = "sidebar-form",
+          div( class = "input-group",
+               tags$input( id = "searchText", type = "text",
+                           class = "form-control", placeholder = "Search..."),
+               span(class = "input-group-btn",
+                    tags$button(id = "searchButton", type = "submit",
+                                class = "btn btn-flat action-button", shiny::icon("search"))
+               )
+          )
+      ),
+
+
     sidebarMenu(id = "tabs",
                 tags$li(class = "header", "MAIN MENU"),
                 menuItem("Dashboard", tabName = "dashboard", icon = icon("dashboard"),
