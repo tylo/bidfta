@@ -92,11 +92,11 @@ gen_amazon_url <- function(description) {
 ######################################
 #--------- FUNCTION: GEN_PINS -------#
 ######################################
-pin_html <- '<div class="pin box"><a href="%s" target="_blank"><img src="%s"/><p>%s</p></div>'
+pin_html <- '<div class="pin box"><a href="%s" target="_blank"><img src="%s"/></a><p>%s</p></div>'
 gen_pins <- function( description, item_url, img_url,
                       auction_end="", location="", gcal_url="", amazon_url ="" ) {
 
-    pin_html %>% sprintf( img_url, item_url, description)
+    pin_html %>% sprintf( item_url, img_url, description)
 
 }
 

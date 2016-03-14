@@ -204,7 +204,10 @@ server <- function(input, output, session) {
       )
 
       search_res() %>%
-          transmute(newcol = gen_pins( clean_description(Description), link, img_src )) %>%
+          transmute(newcol = gen_pins( clean_description(Description),
+                                       link,
+                                       img_src )
+          ) %>%
           unlist %>%
           paste0( collapse="" ) %>%
           HTML
