@@ -85,3 +85,19 @@ body {
 /*#columns:hover .pin:not(:hover) {
 	opacity: 0.4;
 }*/
+
+
+/* PROGRESS BARS */
+.shiny-progress .bar {
+    opacity = 0.25;
+    background-color: #dd4b39;
+}
+.shiny-progress .progress {
+    height:18px;
+}
+.shiny-progress .progress-text {
+    top: 0px;
+    background-color: #dd4b39;
+    opacity = 0.25;
+    color: white;
+}
