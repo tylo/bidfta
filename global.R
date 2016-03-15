@@ -134,7 +134,7 @@ gen_pins <- function( description, item_url, img_url,
     amazon_url <- gen_amazon_url ( description ) # create amazon url
     gcal_url <- gen_gcal_url( paste("Bid:", title ), auction_end , item_url)
 
-    pin_html %>% sprintf( auction_end %>% strftime( format = "%a %r"),
+    pin_html %>% sprintf( auction_end %>% strftime( format = "%a %r", tz="America/New_York"),
                           item_url, img_url,  description, amazon_url, gcal_url
     )
 
