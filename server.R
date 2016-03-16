@@ -191,7 +191,7 @@ server <- function(input, output, session) {
           transmute(newcol = gen_pins( clean_description(Description),
                                        link.x,
                                        img_src,
-                                       date))%>%
+                                       date)) %>%
           unlist %>%
           paste0( collapse="" ) %>%
           HTML

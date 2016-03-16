@@ -104,9 +104,9 @@ gen_gcal_url <- function(event_title, stime, description, loc="" ) {
     gcal_base %>%
         rep_len( length( event_title ) ) %>%
         param_set( "text", event_title ) %>%
+        param_set( "dates", paste0( start_time,"/", end_time )) %>%
         param_set( "details", description ) %>%
-        param_set( "location", loc ) %>%
-        param_set( "dates", paste0( start_time,"/", end_time ))
+        param_set( "location", loc ) %>% print
 }
 
 
@@ -132,7 +132,8 @@ gen_pins <- function( description, item_url, img_url,
 
     title <- gen_title( description, 5) # short title for the pin
     amazon_url <- gen_amazon_url ( description ) # create amazon url
-    gcal_url <- gen_gcal_url( paste("Bid:", title ), auction_end , item_url)
+    gcal_url <- gen_gcal_url( paste("Bid:", title ) %>% url_encode,
+                              auction_end , item_url )
 
     pin_html %>% sprintf( auction_end %>% strftime( format = "%a %r", tz="America/New_York"),
                           item_url, img_url,  description, amazon_url, gcal_url
