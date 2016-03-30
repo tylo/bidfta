@@ -73,7 +73,7 @@ ui <- dashboardPage( skin = "black",
                tags$input( id = "searchText", type = "text",
                            class = "form-control", placeholder = "Search..."),
                span(class = "input-group-btn",
-                    tags$button(id = "searchButton", type = "submit",
+                    tags$button(id = "searchButton", #type = "submit",
                                 class = "btn btn-flat action-button", shiny::icon("search"))
                )
           )
@@ -151,7 +151,7 @@ ui <- dashboardPage( skin = "black",
                           # Add term / remove selected
                           div(class = "input-group",
                               tags$input(
-                                  id = "add_term",
+                                  id = "wishlist_add_term",
                                   type = "text",
                                   class = "form-control",
                                   placeholder = "Add term"
@@ -159,10 +159,10 @@ ui <- dashboardPage( skin = "black",
 
                               div(class = "input-group-btn",
                                   actionButton(
-                                      "add", label = "", icon = icon("plus-square-o") #class = "btn-info"
+                                      "wishlist_add", label = "", icon = icon("plus-square-o") #class = "btn-info"
                                   ),
                                   actionButton(
-                                      "remove_selected", label = "", icon = icon("minus-square-o") #class = "btn-info"
+                                      "wishlist_remove_selected", label = "", icon = icon("minus-square-o") #class = "btn-info"
                                   )
                               )
                           )

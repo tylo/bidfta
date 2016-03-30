@@ -98,7 +98,7 @@ gen_amazon_url <- function(description) {
 gcal_base <- "https://www.google.com/calendar/render?action=TEMPLATE&text=[description]&dates=[start]&details=[details]&location=[location]"
 gen_gcal_url <- function(event_title, stime, description, loc="" ) {
 
-    start_time <- (stime - 30*60) %>% strftime(format = "%Y%m%dT%H%M00Z", tz="UTC" )
+    start_time <- (stime - 15*60) %>% strftime(format = "%Y%m%dT%H%M00Z", tz="UTC" )
     end_time <- stime %>% strftime(format = "%Y%m%dT%H%M00Z", tz="UTC")
 
     gcal_base %>%

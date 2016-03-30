@@ -92,10 +92,10 @@ server <- function(input, output, session) {
 
 
   #### OBSERVER: ADD BUTTON ####
-  observeEvent(input$add, {
+  observeEvent(input$wishlist_add, {
 
     print("Clicked: Add")
-    tmp <- input$add_term
+    tmp <- input$wishlist_add_term
     if (tmp != "") {
 
       cat('Adding: ', tmp)
@@ -108,7 +108,7 @@ server <- function(input, output, session) {
 
 
   #### OBSERVER: REMOVE_SELECTED BUTTON ####
-  observeEvent(input$remove_selected, {
+  observeEvent(input$wishlist_remove_selected, {
 
     print("Clicked: Remove")
     tmp <- input$wishlist_rows_selected
