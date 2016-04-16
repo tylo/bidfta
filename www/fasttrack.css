@@ -3,7 +3,7 @@
   font-size: 16px;
 }*/
 
-/*
+
 .box-title {
     font-size: 15px;
 }
@@ -19,13 +19,14 @@
 body {
 	background: url(http://subtlepatterns.com/patterns/scribble_light.png) ;
 }
-
+/*
 #wrapper {
 	width: 100%;
 	max-width: 1100px;
 	min-width: 800px;
 	margin: 25px auto;
 }
+*/
 
 #columns {
 	-webkit-column-count: 3;
@@ -52,7 +53,8 @@ body {
 	background: -webkit-linear-gradient(45deg, #FFF, #F9F9F9);
 	opacity: 1;
 	border: 2px solid #FAFAFA;*/
-	/*
+	
+    /*
     box-shadow: 0 1px 2px rgba(34, 25, 25, 0.4);
 	-webkit-transition: all .2s ease;
 	-moz-transition: all .2s ease;
@@ -103,4 +105,3 @@ body {
     opacity = 0.25;
     color: white;
 }
-*/
