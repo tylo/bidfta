@@ -104,7 +104,7 @@ ui <- dashboardPage( skin = "black",
                   fluidRow(
                       tags$section(class="content-header",
                                    h1("Welcome to FastTrack Bidder",
-                                      tags$small("Version 0.2")
+                                      tags$small("Version 0.5")
                                    ),
                                    #em("Brought to you by BBRI (Beaver Brigade Research & Innovation)"),
 
@@ -116,6 +116,8 @@ ui <- dashboardPage( skin = "black",
                                            tags$li(class="active", "Dashboard")
                                    )
                       ),
+                          box(title = "What's New!?!", collapsible = TRUE, width = 12,
+                              "As of Version 0.5, you can now search directly from the wishlist"),
                       br(),
                       infoBox("Ending Soon", width = 5,
                               icon = icon("clock-o"), fill = F, color = "yellow",
