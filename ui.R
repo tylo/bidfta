@@ -150,6 +150,10 @@ ui <- dashboardPage( skin = "black",
                           br(),
                           # Add term / remove selected
                           div(class = "input-group",
+                              div( class = "input-group-btn",
+                                    actionButton( "wishlist_search", label = "",
+                                                  icon = icon("search"), class = "btn-primary")
+                              ),
                               tags$input(
                                   id = "wishlist_add_term",
                                   type = "text",
@@ -159,10 +163,10 @@ ui <- dashboardPage( skin = "black",
 
                               div(class = "input-group-btn",
                                   actionButton(
-                                      "wishlist_add", label = "", icon = icon("plus-square-o") #class = "btn-info"
+                                      "wishlist_add", label = "", icon = icon("plus-square-o")
                                   ),
                                   actionButton(
-                                      "wishlist_remove_selected", label = "", icon = icon("minus-square-o") #class = "btn-info"
+                                      "wishlist_remove_selected", label = "", icon = icon("minus-square-o")
                                   )
                               )
                           )

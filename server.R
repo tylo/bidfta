@@ -76,20 +76,30 @@ server <- function(input, output, session) {
   ######################################
 
   #### REACTIVE: SEARCH_RES ####
-  search_res  <- eventReactive(input$searchButton , {
+  search_res <- reactiveValues( data = NULL )
 
-      input$searchText %>%
+  observeEvent(input$searchButton , {
+
+      search_res$data <- input$searchText %>%
           ifelse( input$wrap_whole, paste0( "\\W",.,'\\W' ), . ) %>%
           print %>%
           grepl( items_df$Description, ignore.case = T ) %>%
           items_df[.,]
+      updateTabItems(session, "tabs", "search")
   })
 
-  #### OBSERVER: SEARCH BUTTON ####
-  observeEvent(input$searchButton, {
-    updateTabItems(session, "tabs", "search")
-  })
+  observeEvent(input$wishlist_search , {
 
+      tmp <- input$wishlist_rows_selected
+      validate(need( tmp,"" ))
+      search_res$data <- wishlist$data[tmp] %>%
+          ifelse( input$wrap_whole, paste0( "\\W",.,'\\W' ), . ) %>%
+          print %>%
+          grepl( items_df$Description, ignore.case = T ) %>%
+          items_df[.,]
+      updateTabItems(session, "tabs", "search")
+
+  })
 
   #### OBSERVER: ADD BUTTON ####
   observeEvent(input$wishlist_add, {
@@ -166,6 +176,7 @@ server <- function(input, output, session) {
                                            #width = "50%",
                                            server = F,
                                            class = 'hover',
+                                           selection = "single",
                                            options = list(dom = 't',
                                                           pageLength = 25)
     )
@@ -183,10 +194,10 @@ server <- function(input, output, session) {
   ### OUTPUT: PINS_DIV ###
   output$pins_div <- renderUI({
       validate(
-          need( nrow(search_res())>0, "No results")
+          need( nrow(search_res$data)>0, "No results")
       )
 
-      search_res() %>%
+      search_res$data %>%
           left_join(auctions_df, by=c("Auction"="title")) %>%
           transmute(newcol = gen_pins( clean_description(Description),
                                        link.x,
@@ -200,10 +211,10 @@ server <- function(input, output, session) {
 
   ### OUTPUT: SEARCH_DF ###
   output$search_df  <- DT::renderDataTable({
-    if (is.null(search_res()))
+    if (is.null(search_res$data))
       return()
 
-    search_res() %>%
+    search_res$data %>%
       mutate(
         Photo = paste0(
           '<a href="',
