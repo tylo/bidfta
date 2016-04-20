@@ -146,17 +146,19 @@ gen_pins <- function( description, item_url, img_url,
 #-------- FUNCTION: RESCRAPE --------#
 ######################################
 
-rescrape <- function() {
+rescrape <- function( use.progress = T ) {
 
     # Create a Progress object
-    progress <- shiny::Progress$new()
-    progress$set(message = "Scraping ...", value = 0)
-    on.exit(progress$close())
+    if ( use.progress ) {
+        progreprogress <- shiny::Progress$new()
+        progress$set(message = "Scraping ...", value = 0)
+        on.exit(progress$close())
 
-    # Progress call-back
-    incrementProgress <- function(incr) {
-        value <- progress$getValue()
-        progress$set(value = value + incr)
+        # Progress call-back
+        incrementProgress <- function(incr) {
+            value <- progress$getValue()
+            progress$set(value = value + incr)
+        }
     }
 
     # Reading in home page
@@ -192,12 +194,12 @@ rescrape <- function() {
 
     # Time the 1st retrieval
     "|----- GETTING AUCTIONS -----|" %>% cat("\n",., "\n\n")
-    progress$set(detail = "Fetching auction list", value=0)
+    if ( use.progress ) progress$set(detail = "Fetching auction list", value=0)
     auctions_incr <- auctions_items_bar_split/length(link)
     ptm <- proc.time()
     auctions <- link %>%
         #.[40:60] %>%
-        lapply(function(x) auction_details(x, auctions_incr, incrementProgress ))
+        lapply( auction_details, auctions_incr, ifelse( use.progress, incrementProgress, NULL ))
 
     # Report how many null auctions
     auctions %>% sapply(is.null) %>% sum %>% cat("\n",.,"expired or invalid auctions removed\n")
@@ -237,11 +239,11 @@ rescrape <- function() {
     "|----- GETTING ITEMS -----|" %>%  cat("\n",., "\n")
     ptm <- proc.time()
 
-    progress$set(detail = "Fetching auction items", value = auctions_items_bar_split)
+    if ( use.progress ) progress$set(detail = "Fetching auction items", value = auctions_items_bar_split)
     items_incr <- (1 - auctions_items_bar_split)/length(auctions_df$link)
     items <- auctions_df$link %>%
         #mclapply(get_itemslist, mc.cores = 6)
-        lapply( function(x) get_itemlist(x, items_incr, incrementProgress ))
+        lapply( get_itemlist, items_incr, ifelse( use.progress, incrementProgress, NULL ))
     names(items) <- auctions_df$title
 
     #Output time to shell
@@ -259,14 +261,13 @@ rescrape <- function() {
     #print("done3")
 }
 
-
 ######################################
 #----- FUNCTION: AUCTION_DETAILS ----#
 ######################################
 
 # Pulls auction details from an auction description page link
-auction_details  <- function(link, incr, progress_updater) {
-    progress_updater(incr)
+auction_details  <- function(link, incr, progress_updater = NULL) {
+    if( !is.null( progress_updater )) progress_updater(incr)
     a  <- list()
     tmp <- read_html(link) %>%
         html_nodes("table tr td")
@@ -320,9 +321,9 @@ auction_details  <- function(link, incr, progress_updater) {
 ######################################
 
 # Pulls item lists from an auction item list link
-get_itemlist  <- function(lnk, incr, progress_updater) {
+get_itemlist  <- function(lnk, incr, progress_updater = NULL) {
 
-    progress_updater(incr)
+    if( !is.null( progress_updater )) progress_updater(incr)
     lnk %>% cat("\n", .)
 
     root_link <- lnk %>%
