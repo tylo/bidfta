@@ -150,7 +150,7 @@ rescrape <- function( use.progress = T ) {
 
     # Create a Progress object
     if ( use.progress ) {
-        progreprogress <- shiny::Progress$new()
+        progress <- shiny::Progress$new()
         progress$set(message = "Scraping ...", value = 0)
         on.exit(progress$close())
 
@@ -199,7 +199,7 @@ rescrape <- function( use.progress = T ) {
     ptm <- proc.time()
     auctions <- link %>%
         #.[40:60] %>%
-        lapply( auction_details, auctions_incr, ifelse( use.progress, incrementProgress, NULL ))
+        lapply( auction_details, auctions_incr, if(use.progress) incrementProgress else NULL )
 
     # Report how many null auctions
     auctions %>% sapply(is.null) %>% sum %>% cat("\n",.,"expired or invalid auctions removed\n")
@@ -243,7 +243,7 @@ rescrape <- function( use.progress = T ) {
     items_incr <- (1 - auctions_items_bar_split)/length(auctions_df$link)
     items <- auctions_df$link %>%
         #mclapply(get_itemslist, mc.cores = 6)
-        lapply( get_itemlist, items_incr, ifelse( use.progress, incrementProgress, NULL ))
+        lapply( get_itemlist, items_incr, if( use.progress ) incrementProgress else NULL )
     names(items) <- auctions_df$title
 
     #Output time to shell
