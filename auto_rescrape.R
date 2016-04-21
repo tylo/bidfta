@@ -1,2 +1,2 @@
 source("global.R")
-rescrape()
+rescrape(F)
