@@ -253,12 +253,12 @@ rescrape <- function( use.progress = T ) {
         do.call( rbind, . ) %>%
         mutate( Auction = gsub("\\.[0-9]+","", row.names(.)) )
 
-    write.csv(Sys.time(), "CSV/timestamp.csv", row.names = F)
-    #print("done1")
+    # Add new timestamp
+    data.frame( time = Sys.time(), method = ifelse( use.progress, "browser", "cron" ) ) %>%
+        write.csv( "CSV/timestamp.csv", append = T, row.names = F )
+
     write.csv(auctions_df, "CSV/auctions.csv", row.names = F)
-    #print("done2")
     write.csv(items_df, "CSV/items.csv", row.names = F)
-    #print("done3")
 }
 
 ######################################

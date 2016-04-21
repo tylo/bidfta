@@ -13,7 +13,7 @@ server <- function(input, output, session) {
   # Recording current time and checking timestamp from previously downloaded data
   curtime  <- Sys.time()
   lasttime <- try(
-    read.csv("CSV/timestamp.csv", stringsAsFactors = F) %>% unlist,
+    read.csv("CSV/timestamp.csv", stringsAsFactors = F) %>% .[,1] %>% tail(1) %>% unlist ,
     silent = T)
 
   if (class(lasttime) == "try-error")
