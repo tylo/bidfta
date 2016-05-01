@@ -11,6 +11,9 @@ require(urltools)
 
 auto_refresh_time <- 3600 * 3
 ending_soon_time <- 3600 * 2
+scrape_locations <- c("Cincinnati", "Sharonville", "West Chester",
+                      "Maineville", "Milford", "Fairfield")
+description_end_regex <- "((Item )?Location:|Front Page:|Lotted By:|Load #:|Contact:|Facebook:|Pinterest:|Twitter:).*"
 
 # Some constants
 time_file_format  <- "%Y-%m-%d %H:%M:%S"
@@ -63,8 +66,8 @@ clean_str <- function(str) {
 ######################################
 clean_description <- function(description) {
     description %>%
-        gsub("(Additional Information|MSRP|Retail):.*", "", .) %>%
-        gsub("(\t|\n|\r).*", "", .)
+        iconv( to = 'UTF-8', sub = ' ' ) %>%
+        gsub(description_end_regex,"", .)
 }
 
 ######################################
@@ -85,9 +88,8 @@ amazon_base <- "http://www.amazon.com/s/ref=nb_sb_noss?url=search-alias%3Daps&fi
 gen_amazon_url <- function(description) {
 
     description %>%
+        gsub("(Additional Information|MSRP|Retail):.*", "", .) %>%
         gsub("((Item)? ?Description|Brand): ?", " ", .) %>%
-        clean_description %>%
-        gsub("(\t|\n|\r).*", "", .) %>%
         gsub(" +", "+", .) %>%
         paste0(amazon_base, . )
 }
@@ -106,7 +108,7 @@ gen_gcal_url <- function(event_title, stime, description, loc="" ) {
         param_set( "text", event_title ) %>%
         param_set( "dates", paste0( start_time,"/", end_time )) %>%
         param_set( "details", description ) %>%
-        param_set( "location", loc ) %>% print
+        param_set( "location", loc )
 }
 
 
@@ -161,104 +163,106 @@ rescrape <- function( use.progress = T ) {
         }
     }
 
-    # Reading in home page
-    link  <- read_html("http://bidfta.com/") %>%
+    # Reading in old auction links and comparing with currently-available links.
+    # We only scrape links not previously known!
+    known_links <- try(read.csv("CSV/known_links.csv", stringsAsFactors = F) %>% .[,1])
+
+    current_links  <- read_html("http://bidfta.com/") %>%
         html_nodes(".auction")  %>%
-        html_node("a") %>%
+        html_nodes("a[target=_blank]") %>%
         html_attr("href")
 
-    ##########################################################
-    ##### THIS STUFF SHOULD GO IN A VALIDATOR FUNCTION #######
-    # Filter out links on other auction sites
-    fix_these  <- grep("mnlist",link)
-
-    link[fix_these] <- link[fix_these] %>%
-        gsub("mnlist","mndetails",.) %>%
-        sub("/category/ALL","",.)
+    new_links <- if ( class(known_links) == "try-error" )
+        validate_links(current_links) else
+            validate_links( setdiff(current_links, known_links) )
 
 
-    # Filter out blank links
-    link <- link[link != '']
-
-    # Filter out links on other auction sites
-    bidfta_hosted <- grepl("bidfta", link, ignore.case = T)
-
-    "total links found" %>% cat(link %>% length,.,"\n")
-    "external auctions removed\n" %>% cat((!bidfta_hosted) %>% sum, .)
-    link <- link[bidfta_hosted]
-
-
-    ##### END LINK VALIDATION ################################
-    ##########################################################
-
-
-    # Time the 1st retrieval
+    # GET AUCTION DETAILS (expiration, location, title)
     "|----- GETTING AUCTIONS -----|" %>% cat("\n",., "\n\n")
     if ( use.progress ) progress$set(detail = "Fetching auction list", value=0)
-    auctions_incr <- auctions_items_bar_split/length(link)
+    auctions_incr <- auctions_items_bar_split/length(new_links)
     ptm <- proc.time()
-    auctions <- link %>%
-        #.[40:60] %>%
-        lapply( auction_details, auctions_incr, if(use.progress) incrementProgress else NULL )
 
-    # Report how many null auctions
-    auctions %>% sapply(is.null) %>% sum %>% cat("\n",.,"expired or invalid auctions removed\n")
+    auctions <- 1:length( new_links ) %>%
+        lapply( function(i) {
+            cat( sprintf("%-4s", i))
+            auction_details( new_links[i],
+                             auctions_incr, if(use.progress) incrementProgress else NULL )})
 
-    auctions <- auctions %>%
-        #mclapply(auction_details, mc.preschedule = F, mc.cores = 4) %>%  #trying multithreaded
-        .[!sapply(.,is.null)]
+    # Report how many null auctions and filter them out
+    null.auctions <- auctions %>% sapply(is.null)
+    cat("\n", sum( null.auctions ),"expired or invalid auctions removed\n")
+    auctions <- auctions[ !null.auctions ]
 
     auctions_df <- auctions %>%
         lapply(data.frame, stringsAsFactors = FALSE) %>%
-        do.call(rbind, .)
-
+        do.call(rbind, .) %>%
+        mutate( link.descpage = new_links[ !null.auctions ],
+                link.pageditems  = link.descpage %>%
+                    gsub("mndetails","mnlist",.) %>% paste0("/category/ALL")
+        )
 
     #Output time to shell
     print(proc.time() - ptm)
-
-
 
     #Cleaning locations and eliminating out-of-towners
     auctions_df$location <- auctions_df$location %>% gsub(" \\d{5}.*","",., ignore.case = T)
     auctions_df$location %>% table %>% data.frame %>% arrange(desc(Freq)) %>% print
 
-    # Good locations
-    good_loc  <- c("Cincinnati", "Sharonville", "West Chester") %>%
-        sapply(function(x) grepl(x, auctions_df$location, ignore.case = T)) %>%
-        apply(1, any)
-
-
+    # Remove locations not on the scrape_locations list
+    good_loc  <- paste(scrape_locations, sep = "", collapse = "|") %>%
+        grepl( auctions_df$location, ignore.case = T )
 
     # Report how many auctions in different locations
-    (good_loc) %>% sum %>% cat("\n",.,"local auctions\n")
-    (!good_loc) %>% sum %>% cat("out-of-town auctions removed\n")
-
+    cat((!good_loc) %>% sum, "out-of-town auctions removed\n")
+    cat((good_loc) %>% sum ,"local auctions to be scraped\n")
     auctions_df <- filter(auctions_df, good_loc)
 
-    # Get Items
+    # Append new auctions_df to old (unexpired) auctions_df to get current
+    old_auctions_df  <- try(
+        read.csv( "CSV/auctions.csv", stringsAsFactors = F) %>%
+            mutate( date =  strptime(date, time_file_format, tz = "EST5EDT") %>% as.POSIXct ) %>%
+            filter(date > Sys.time() )
+    )
+    current_auctions_df <- if( class(old_auctions_df) == "try-error" )
+        auctions_df else rbind(old_auctions_df,auctions_df)
+
+    # GET ITEMS
     "|----- GETTING ITEMS -----|" %>%  cat("\n",., "\n")
     ptm <- proc.time()
-
     if ( use.progress ) progress$set(detail = "Fetching auction items", value = auctions_items_bar_split)
-    items_incr <- (1 - auctions_items_bar_split)/length(auctions_df$link)
-    items <- auctions_df$link %>%
-        #mclapply(get_itemslist, mc.cores = 6)
-        lapply( get_itemlist, items_incr, if( use.progress ) incrementProgress else NULL )
-    names(items) <- auctions_df$title
+    items_incr <- (1 - auctions_items_bar_split)/length(auctions_df$urlname)
 
-    #Output time to shell
-    print(proc.time() - ptm)
+    items <- 1:nrow(auctions_df) %>%
+        lapply( function(i) {
+            cat("\n", sprintf("%-4s", i) )
+            get_itemlist(auctions_df$link.pageditems[i],
+                         items_incr, if( use.progress ) incrementProgress else NULL )})
+
+    names(items) <- auctions_df$title
 
     items_df <- items %>%
         do.call( rbind, . ) %>%
         mutate( Auction = gsub("\\.[0-9]+","", row.names(.)) )
+    print(proc.time() - ptm)
+
+    # Filter out items from old auctions that have passed, add in new ones, and save
+    old_items_df  <- try(
+        "CSV/items.csv" %>%
+        read.csv(stringsAsFactors = F) %>%
+        filter(Auction %in% old_auctions_df$title)
+    )
+
+    current_items_df <- if( class(old_items_df) == "try-error" )
+        items_df else rbind(old_items_df,items_df)
 
     # Add new timestamp
     data.frame( time = Sys.time(), method = ifelse( use.progress, "browser", "cron" ) ) %>%
         write.table( "CSV/timestamp.csv", append = T, sep = ",", row.names = F, col.names = F )
 
-    write.csv(auctions_df, "CSV/auctions.csv", row.names = F)
-    write.csv(items_df, "CSV/items.csv", row.names = F)
+    write.csv( current_links, "CSV/known_links.csv", row.names = F )
+    write.csv( current_auctions_df, "CSV/auctions.csv", row.names = F )
+    write.csv( current_items_df, "CSV/items.csv", row.names = F )
 }
 
 ######################################
@@ -266,13 +270,16 @@ rescrape <- function( use.progress = T ) {
 ######################################
 
 # Pulls auction details from an auction description page link
-auction_details  <- function(link, incr, progress_updater = NULL) {
+auction_details  <- function(new_links, incr, progress_updater = NULL) {
     if( !is.null( progress_updater )) progress_updater(incr)
+
     a  <- list()
-    tmp <- read_html(link) %>%
+    a$urlname <- gsub(".*\\?","",new_links)
+    cat( sprintf("%-18s", a$urlname ) )
+
+    tmp <- read_html(new_links) %>%
         html_nodes("table tr td")
 
-    cat(link)
     try(a$date  <- tmp[[6]] %>%
             html_text %>%
             gsub("\\.", ",", .) %>%
@@ -295,24 +302,14 @@ auction_details  <- function(link, incr, progress_updater = NULL) {
             return(NULL)
         }
         else {
-            a$date %>% format(usetz = T) %>% cat(" | ", . ,"\n")
+            cat(" |", a$date %>% format(usetz = T),"\n")
         }
     )
 
-    a$title  <- tmp %>%
-        html_nodes("#auction_title") %>%
-        .[[1]] %>%
-        html_text
+    a$title  <- tmp %>% html_nodes("#auction_title") %>% .[[1]] %>% html_text
 
     # 8th entry / row in table contains auction location
-    a$location  <- tmp[[8]] %>%
-        html_text %>%
-        clean_str
-
-    a$link  <- link %>%
-        gsub("mndetails","mnlist",.) %>%
-        paste0("/category/ALL")
-    #cat("OK\n")
+    a$location  <- tmp[[8]] %>% html_text %>% clean_str
     a
 }
 
@@ -324,10 +321,11 @@ auction_details  <- function(link, incr, progress_updater = NULL) {
 get_itemlist  <- function(lnk, incr, progress_updater = NULL) {
 
     if( !is.null( progress_updater )) progress_updater(incr)
-    lnk %>% cat("\n", .)
 
-    root_link <- lnk %>%
-        gsub("category/ALL","", .)
+    urlname <-  gsub( ".*\\?", "", lnk) %>% gsub("/.*","",.)
+    cat( sprintf("%-18s", urlname ) )
+
+    root_link <- lnk %>% gsub("category/ALL","", .)
 
     itemlist <- root_link %>%
         gsub("mnlist", "mnprint", .) %>%
@@ -335,34 +333,57 @@ get_itemlist  <- function(lnk, incr, progress_updater = NULL) {
         html_node("#DataTable") %>%
         html_table(header = T, fill = T) %>%
         mutate( Item = gsub("[.]","", Item),
-                Description = iconv(Description, to = 'UTF-8', sub = ' ')) %>%
-        mutate(link = paste0(root_link, Item))
+                Description = clean_description( Description ) ) %>%
+        mutate( link.item = paste0(root_link, Item) )
 
     cat(" |","itemlist ok")
     #itemlist %>%  print
 
-    n <- nrow(itemlist) - 1
+    n <- nrow(itemlist)
+    img_link <- try( itemlist$link %>% .[n] %>%
+                         read_html %>%
+                         html_node("#DataTable") %>%
+                         html_node("img") %>%
+                         html_attr("src") )
 
-    try(img_link <- itemlist$link %>%
-            .[n] %>%
-            read_html %>%
-            html_node("#DataTable") %>%
-            html_node("img") %>%
-            html_attr("src"))
+    cat(" |", ifelse( class(img_link) == "try-error", "!img_link bad!" , "img_link ok"))
 
-    cat(" |","img_link ok")
+    try({
+        # try(img_suffix <- img_link %>%
+        #         regexpr("\\.\\w+$",.) %>%
+        #         regmatches(img_link, .))
+        img_prefix <- img_link %>% gsub("/[^/]+$","/",.)
+        img_suffix <- img_link %>% gsub(paste0(img_prefix, itemlist$Item[n]), "", .)
+        itemlist %>% mutate(img_src = paste0(img_prefix, Item, img_suffix))
+    })
 
-    try(img_prefix <- img_link %>%
-            gsub("/[^/]+$","/",.))
+}
 
-    try(img_suffix <- img_link %>%
-            regexpr("\\.\\w+$",.) %>%
-            regmatches(img_link, .))
+######################################
+#----- FUNCTION: VALIDATE_LINKS -----#
+######################################
 
-    try(img_suffix <- img_link %>%
-            gsub(paste0(img_prefix, itemlist$Item[n]), "", .))
+# Checks whether auction links and consistent, valid, and bidfta-hosted.
+validate_links <- function(lnks) {
 
-    try(itemlist %>%
-            mutate(img_src = paste0(img_prefix, Item, img_suffix)))
+    # Fix links that lead directly to page itemlist instead of auction description
+    fix_these  <- grep("mnlist",lnks)
+    if (length(fix_these) > 0 ) {
+        lnks[fix_these] <- lnks[fix_these] %>%
+            gsub("mnlist","mndetails",.) %>%
+            sub("/category/ALL","",.)
+    }
 
+    # Filter out blank links
+    lnks <- lnks[lnks != '']
+
+    # Filter out links on other auction sites
+    bidfta_hosted <- grepl("bidfta", lnks, ignore.case = T)
+
+    cat( sum(bidfta_hosted) ,"New valid auction links found\n")
+    cat( sum(!bidfta_hosted) , "New external auctions were ignored:\n")
+    lnks[!bidfta_hosted] %>% paste("*", . , collapse = "\n") %>%
+        cat("\n")
+
+    lnks <- lnks[bidfta_hosted]
 }

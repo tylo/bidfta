@@ -12,37 +12,25 @@ server <- function(input, output, session) {
 
   # Recording current time and checking timestamp from previously downloaded data
   curtime  <- Sys.time()
-  lasttime <- try(
-    read.csv("CSV/timestamp.csv", stringsAsFactors = F, header = F) %>% .[,1] %>% tail(1) %>% unlist ,
-    silent = T)
+  lasttime <- try( read.csv("CSV/timestamp.csv", stringsAsFactors = F, header = F) %>%
+        .[,1] %>% tail(1) %>% unlist , silent = T)
 
-  if (class(lasttime) == "try-error")
-  {
+  if (class(lasttime) == "try-error") {
     lasttime <- curtime  - auto_refresh_time
     cat("No Scrape History Found", "\n\n")
-
-  } else {
-    lasttime <- lasttime %>%
-      strptime(time_file_format) %>%
-      as.POSIXct
-
-    cat("Last Scrape:  ", format(lasttime, time_file_format,
-                                 usetz = T, tz = "EST5EDT"),
-        "\n")
+  }
+  else {
+    lasttime <- lasttime %>% strptime(time_file_format) %>% as.POSIXct
+    cat("Last Scrape:  ", format(lasttime, time_file_format, usetz = T, tz = "EST5EDT"), "\n")
   }
 
   # Status Updates
-  cat("Current Time: ", format(curtime, time_file_format,
-                               usetz = T, tz = "EST5EDT"),
-      "\n")
+  cat("Current Time: ", format(curtime, time_file_format, usetz = T, tz = "EST5EDT"), "\n")
   cat("Refresh Due:  ",format(lasttime + auto_refresh_time, time_file_format,
-                              usetz = T, tz = "EST5EDT"),
-      "\n\n")
+                              usetz = T, tz = "EST5EDT"), "\n\n")
 
   # Rescrape if due time
-  if (curtime >= lasttime + auto_refresh_time) {
-    rescrape()
-  }
+  if (curtime >= lasttime + auto_refresh_time) rescrape()
 
   # Filter out auctions that have already passed
   # Make sure auction expiration has right time zone
@@ -59,14 +47,9 @@ server <- function(input, output, session) {
   # Populating the index selector with stuff queried from database
   s_options <- unique(auctions_df$location)
   names(s_options) <- s_options
-  updateSelectInput(session, "locSelect",
-                    choices = s_options,
-                    selected = NULL)
-
-
+  updateSelectInput(session, "locSelect", choices = s_options, selected = NULL)
 
   wishlist <- reactiveValues(data = get_wishlist())
-
 
 
   ######################################
@@ -79,24 +62,25 @@ server <- function(input, output, session) {
   search_res <- reactiveValues( data = NULL )
 
   observeEvent(input$searchButton , {
-
+      validate(need( input$searchText, "" ))
       search_res$data <- input$searchText %>%
           ifelse( input$wrap_whole, paste0( "\\W",.,'\\W' ), . ) %>%
           print %>%
           grepl( items_df$Description, ignore.case = T ) %>%
           items_df[.,]
+
       updateTabItems(session, "tabs", "search")
   })
 
   observeEvent(input$wishlist_search , {
 
-      tmp <- input$wishlist_rows_selected
-      validate(need( tmp,"" ))
-      search_res$data <- wishlist$data[tmp] %>%
+      validate(need( input$wishlist_rows_selected,'' ))
+      search_res$data <- wishlist$data[ input$wishlist_rows_selected ] %>%
           ifelse( input$wrap_whole, paste0( "\\W",.,'\\W' ), . ) %>%
           print %>%
           grepl( items_df$Description, ignore.case = T ) %>%
           items_df[.,]
+
       updateTabItems(session, "tabs", "search")
 
   })
@@ -159,7 +143,7 @@ server <- function(input, output, session) {
                  pretty = paste(pretty_date, pretty_name)
           )
 
-      a(auc$pretty, href = auc$link, target="_blank")
+      a(auc$pretty, href = auc$link.pageditems, target="_blank")
   })
 
 
@@ -184,23 +168,23 @@ server <- function(input, output, session) {
 
 
   ### OUTPUT: AUCTIONS_DF ###
-  output$auctions_df  <- renderDataTable({auctions_df %>%
-                                           mutate(title = paste0('<a href="', link, '" target="_blank">',title,'</a>')) %>%
-                                           select(date, title, location)},
-                                         escape = F
+  output$auctions_df  <- renderDataTable({
+      auctions_df %>%
+          mutate(title = paste0('<a href="', link.pageditems, '" target="_blank">',title,'</a>')) %>%
+          select(date, title, location)},
+      escape = F
   )
 
 
   ### OUTPUT: PINS_DIV ###
   output$pins_div <- renderUI({
-      validate(
-          need( nrow(search_res$data)>0, "No results")
-      )
+
+      validate(need( nrow(search_res$data) > 0, "No matching items found"))
 
       search_res$data %>%
           left_join(auctions_df, by=c("Auction"="title")) %>%
           transmute(newcol = gen_pins( clean_description(Description),
-                                       link.x,
+                                       link.item,
                                        img_src,
                                        date)) %>%
           unlist %>%
@@ -211,14 +195,13 @@ server <- function(input, output, session) {
 
   ### OUTPUT: SEARCH_DF ###
   output$search_df  <- DT::renderDataTable({
-    if (is.null(search_res$data))
-      return()
+      validate(need( nrow(search_res$data) > 0, "No matching items found"))
 
     search_res$data %>%
       mutate(
         Photo = paste0(
           '<a href="',
-          link,
+          link.item,
           '" target="_blank"><img src="',
           img_src,
           '" class="img-rounded" width="250"/></a>'
