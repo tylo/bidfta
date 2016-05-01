@@ -1,2 +1,6 @@
+cat("Working as user: ",Sys.getenv("USER") ,"\n")
+cat("Working directory: ", getwd(), "\n")
+cat("About to read global.R\n")
 source("global.R")
+cat("About to rescrape\n")
 rescrape(F)
