@@ -343,21 +343,26 @@ get_itemlist  <- function(lnk, incr, progress_updater = NULL) {
     #itemlist %>%  print
 
     n <- nrow(itemlist)
-    img_link <- try( itemlist$link %>% .[n] %>%
+    img_link <- try( itemlist$link.item %>% .[n] %>%
                          read_html %>%
                          html_node("#DataTable") %>%
                          html_node("img") %>%
                          html_attr("src") )
 
-    cat(" |", ifelse( class(img_link) == "try-error", "!img_link bad!" , "img_link ok"))
+    cat(" |", ifelse( class(img_link) == "try-error", "!img_link missing!" , "img_link present"))
 
     try({
-        # try(img_suffix <- img_link %>%
-        #         regexpr("\\.\\w+$",.) %>%
-        #         regmatches(img_link, .))
-        img_prefix <- img_link %>% gsub("/[^/]+$","/",.)
-        img_suffix <- img_link %>% gsub(paste0(img_prefix, itemlist$Item[n]), "", .)
+
+        # Form an image url by figuring out what goes before the //
+        # and what goes after the item number
+        img_prefix <- gsub("/[^/]+$", "/", img_link)
+
+        # img_suffix <- gsub(paste0(img_prefix, itemlist$Item[n]), "", img_link)
+        img_suffix <- gsub(img_prefix, "", img_link) %>%
+            gsub("[a-zA-Z]*[0-9]+","",.)
+
         itemlist %>% mutate(img_src = paste0(img_prefix, Item, img_suffix))
+
     })
 
 }
