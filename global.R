@@ -177,6 +177,9 @@ rescrape <- function( use.progress = T ) {
             validate_links( setdiff(current_links, known_links) )
 
 
+    # Exit if nothing new
+    if (length(new_links) == 0) return()
+
     # GET AUCTION DETAILS (expiration, location, title)
     "|----- GETTING AUCTIONS -----|" %>% cat("\n",., "\n\n")
     if ( use.progress ) progress$set(detail = "Fetching auction list", value=0)
