@@ -9,17 +9,34 @@ library(rjson)
 require(parallel)
 require(urltools)
 
+# Some constants
 auto_refresh_time <- 3600 * 3
 ending_soon_time <- 3600 * 2
 scrape_locations <- c("Cincinnati", "Sharonville", "West Chester",
                       "Maineville", "Milford", "Fairfield")
 description_end_regex <- "((Item )?Location:|Front Page:|Lotted By:|Load #:|Contact:|Facebook:|Pinterest:|Twitter:).*"
+blurb_end_regex <- "<<(Additional Information|MSRP|Retail):.*"
+section_names <- "(Brand|Item Description|MSRP|Model|Specifications|Width|Depth|Height|Weight|Item Link Calc|Additional Information) ?:"
+amazon_base <- "http://www.amazon.com/s/ref=nb_sb_noss?url=search-alias%3Daps&field-keywords="
+gcal_base <- "https://www.google.com/calendar/render?action=TEMPLATE&text=[description]&dates=[start]&details=[details]&location=[location]"
 
-# Some constants
+pin_html <-
+    '<div class="pin box box-info">
+<div class="box-header with-border">
+<h3 class="box-title">%s</h3></div>
+<div class="box-body">
+<a href="%s" target="_blank"><img src="%s"/></a>
+<p>%s</p></div>
+<div class="box-footer text-center no-padding">
+<div class="box-tools">
+<a href="%s" class="btn btn-box-tool" target="_blank"><i class="fa fa-amazon"></i></a>
+<a href="%s" class="btn btn-box-tool" target="_blank"><i class="fa fa-calendar-plus-o"></i></a>
+</div></div>
+</div>'
+
 time_file_format  <- "%Y-%m-%d %H:%M:%S"
 wishlist_loc <- "CSV/wishlist.csv"
 auctions_items_bar_split <- .5
-
 
 
 ######################################
@@ -27,6 +44,7 @@ auctions_items_bar_split <- .5
 #------- HELPER FUNCTIONS -----------#
 #------------------------------------#
 ######################################
+
 
 ######################################
 #------ FUNCTION: GET_WISHLIST ------#
@@ -53,51 +71,51 @@ save_wishlist <- function(tmp_wishlist) {
 ######################################
 #------- FUNCTION: CLEAN_STR --------#
 ######################################
-
 clean_str <- function(str) {
     str %>%
         gsub("[\t\n\r\v\f]", " ", .) %>%
-        gsub(" +"," ",.) %>%
+        gsub("  +"," ",.) %>%
         gsub("^\\s+|\\s+$", "", .)
 }
 
 ######################################
-#--- FUNCTION: CLEAN_DESCRIPTION ----#
+#----- FUNCTION: STRIP_SECTIONS -----#
 ######################################
-clean_description <- function(description) {
-    description %>%
-        iconv( to = 'UTF-8', sub = ' ' ) %>%
-        gsub(description_end_regex,"", .)
+strip_sections <- function(description) {
+    gsub(blurb_end_regex, "", description) %>%
+        gsub("<<(\\w| )*:>>", " ", .) %>%
+        clean_str
 }
+
+######################################
+#---- FUNCTION: STYLE_DESCRIPTIOn ----#
+######################################
+style_description <- function(description) {
+    gsub("<<", "<br><strong>", description) %>%
+        gsub(">>", "</strong>", .) %>%
+        clean_str
+}
+
 
 ######################################
 #------- FUNCTION: GEN_TITLE --------#
 ######################################
 gen_title <- function(description, num_words=3) {
-    gsub(".*Description: ","", description) %>%
-        strsplit(" ") %>%
-        sapply(function(x) x[1:num_words] %>% paste0(collapse = " ")  )
-
+    strsplit(description, " ") %>%
+        sapply(function(x) paste0(x[1:num_words], collapse = " "))
 }
-
 
 ######################################
 #----- FUNCTION: GEN_AMAZON_URL -----#
 ######################################
-amazon_base <- "http://www.amazon.com/s/ref=nb_sb_noss?url=search-alias%3Daps&field-keywords="
 gen_amazon_url <- function(description) {
-
-    description %>%
-        gsub("(Additional Information|MSRP|Retail):.*", "", .) %>%
-        gsub("((Item)? ?Description|Brand): ?", " ", .) %>%
-        gsub(" +", "+", .) %>%
+        gsub(" +", "+", description) %>%
         paste0(amazon_base, . )
 }
 
 ######################################
 #------ FUNCTION: GEN_GCAL_URL ------#
 ######################################
-gcal_base <- "https://www.google.com/calendar/render?action=TEMPLATE&text=[description]&dates=[start]&details=[details]&location=[location]"
 gen_gcal_url <- function(event_title, stime, description, loc="" ) {
 
     start_time <- (stime - 15*60) %>% strftime(format = "%Y%m%dT%H%M00Z", tz="UTC" )
@@ -115,39 +133,50 @@ gen_gcal_url <- function(event_title, stime, description, loc="" ) {
 ######################################
 #--------- FUNCTION: GEN_PINS -------#
 ######################################
-pin_html <-
-'<div class="pin box box-info">
-    <div class="box-header with-border">
-        <h3 class="box-title">%s</h3></div>
-    <div class="box-body">
-        <a href="%s" target="_blank"><img src="%s"/></a>
-        <p>%s</p></div>
-    <div class="box-footer text-center no-padding">
-        <div class="box-tools">
-            <a href="%s" class="btn btn-box-tool" target="_blank"><i class="fa fa-amazon"></i></a>
-            <a href="%s" class="btn btn-box-tool" target="_blank"><i class="fa fa-calendar-plus-o"></i></a>
-        </div></div>
-</div>'
-gen_pins <- function( description, item_url, img_url,
-                      auction_end="", location="") {
+gen_pins <- function(description, item_url, img_url, auction_end="", location="") {
 
+    # short title for the pin
+    title <- strip_sections(description) %>% gen_title(6)
+    amazon_url <- gen_amazon_url(title) # create amazon url
+    gcal_url <- gen_gcal_url(paste("Bid:", title) %>% url_encode, auction_end, item_url)
 
-    title <- gen_title( description, 5) # short title for the pin
-    amazon_url <- gen_amazon_url ( description ) # create amazon url
-    gcal_url <- gen_gcal_url( paste("Bid:", title ) %>% url_encode,
-                              auction_end , item_url )
+    # style the description
+    description_html <- style_description(description)
 
-    pin_html %>% sprintf( auction_end %>% strftime( format = "%a %r", tz="America/New_York"),
-                          item_url, img_url,  description, amazon_url, gcal_url
-    )
-
+    sprintf(pin_html,
+            strftime(auction_end, format = "%a %r", tz="America/New_York"),
+            item_url, img_url, description_html, amazon_url, gcal_url)
 }
 
+######################################
+#--- FUNCTION: PARSE_DESCRIPTION ----#
+######################################
+parse_description <- function(description) {
+    description %>%
+        iconv( to = 'UTF-8', sub = ' ' ) %>%
+        gsub(description_end_regex,"", .) %>%
+        gsub(section_names, "<<\\1:>>", .) %>%
+        clean_str
+}
+
+######################################
+#------- FUNCTION: DO_SEARCH --------#
+######################################
+do_search <- function(search_string, df, col.name = "Description", whole_words = T) {
+
+    # Write search string to log
+    data.frame(time = Sys.time(), search_string = search_string) %>%
+        write.table("log/searches.csv", append = T, sep = ",", row.names = F, col.names = F )
+
+    ifelse(whole_words, paste0("\\W", search_string, '\\W'), search_string) %>%
+        print %>%
+        grepl(df[[col.name]], ignore.case = T) %>%
+        df[.,]
+}
 
 ######################################
 #-------- FUNCTION: RESCRAPE --------#
 ######################################
-
 rescrape <- function( use.progress = T ) {
 
     # Create a Progress object
@@ -177,8 +206,12 @@ rescrape <- function( use.progress = T ) {
             validate_links( setdiff(current_links, known_links) )
 
 
+    # Add new timestamp
+    data.frame( time = Sys.time(), method = ifelse( use.progress, "browser", "cron" ) ) %>%
+        write.table( "CSV/timestamp.csv", append = T, sep = ",", row.names = F, col.names = F )
+
     # Exit if nothing new
-    if (length(new_links) == 0) return()
+    if (length(new_links) == 0)
 
     # GET AUCTION DETAILS (expiration, location, title)
     "|----- GETTING AUCTIONS -----|" %>% cat("\n",., "\n\n")
@@ -205,16 +238,19 @@ rescrape <- function( use.progress = T ) {
                     gsub("mndetails","mnlist",.) %>% paste0("/category/ALL")
         )
 
-    #Output time to shell
+    # Output time to shell
     print(proc.time() - ptm)
 
-    #Cleaning locations and eliminating out-of-towners
+    # Cleaning locations and eliminating out-of-towners
     auctions_df$location <- auctions_df$location %>% gsub(" \\d{5}.*","",., ignore.case = T)
     auctions_df$location %>% table %>% data.frame %>% arrange(desc(Freq)) %>% print
 
     # Remove locations not on the scrape_locations list
     good_loc  <- paste(scrape_locations, sep = "", collapse = "|") %>%
         grepl( auctions_df$location, ignore.case = T )
+
+    # Exit if nothing new
+    if ( sum(good_loc) == 0) return()
 
     # Report how many auctions in different locations
     cat((!good_loc) %>% sum, "out-of-town auctions removed\n")
@@ -259,10 +295,7 @@ rescrape <- function( use.progress = T ) {
     current_items_df <- if( class(old_items_df) == "try-error" )
         items_df else rbind(old_items_df,items_df)
 
-    # Add new timestamp
-    data.frame( time = Sys.time(), method = ifelse( use.progress, "browser", "cron" ) ) %>%
-        write.table( "CSV/timestamp.csv", append = T, sep = ",", row.names = F, col.names = F )
-
+    # Write new data files
     write.csv( current_links, "CSV/known_links.csv", row.names = F )
     write.csv( current_auctions_df, "CSV/auctions.csv", row.names = F )
     write.csv( current_items_df, "CSV/items.csv", row.names = F )
@@ -336,7 +369,7 @@ get_itemlist  <- function(lnk, incr, progress_updater = NULL) {
         html_node("#DataTable") %>%
         html_table(header = T, fill = T) %>%
         mutate( Item = gsub("[.]","", Item),
-                Description = clean_description( Description ) ) %>%
+                Description = parse_description( Description ) ) %>%
         mutate( link.item = paste0(root_link, Item) )
 
     cat(" |","itemlist ok")

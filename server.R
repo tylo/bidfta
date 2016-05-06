@@ -10,6 +10,11 @@ server <- function(input, output, session) {
   #------------------------------------#
   ######################################
 
+    # observeEvent(input$wishlist_search , {
+    #     na <- names(session$clientData)
+    #     lapply(na, function(x) cat(x, session$clientData[[x]],"\n"))
+    # })
+
   # Recording current time and checking timestamp from previously downloaded data
   curtime  <- Sys.time()
   lasttime <- try( read.csv("CSV/timestamp.csv", stringsAsFactors = F, header = F) %>%
@@ -61,26 +66,21 @@ server <- function(input, output, session) {
   #### REACTIVE: SEARCH_RES ####
   search_res <- reactiveValues( data = NULL )
 
+  #### OBSERVER: SEARCH_INPUT SEARCH ####
   observeEvent(input$searchButton , {
       validate(need( input$searchText, "" ))
-      search_res$data <- input$searchText %>%
-          ifelse( input$wrap_whole, paste0( "\\W",.,'\\W' ), . ) %>%
-          print %>%
-          grepl( items_df$Description, ignore.case = T ) %>%
-          items_df[.,]
-
+      search_res$data <-  do_search(input$searchText,
+                                    items_df,
+                                    whole_words = input$wrap_whole)
       updateTabItems(session, "tabs", "search")
   })
 
+  #### OBSERVER: WISHLIST_SEARCH ####
   observeEvent(input$wishlist_search , {
-
-      validate(need( input$wishlist_rows_selected,'' ))
-      search_res$data <- wishlist$data[ input$wishlist_rows_selected ] %>%
-          ifelse( input$wrap_whole, paste0( "\\W",.,'\\W' ), . ) %>%
-          print %>%
-          grepl( items_df$Description, ignore.case = T ) %>%
-          items_df[.,]
-
+      validate(need(input$wishlist_rows_selected, ''))
+      search_res$data <- do_search(wishlist$data[input$wishlist_rows_selected],
+                                   items_df,
+                                   whole_words = input$wrap_whole)
       updateTabItems(session, "tabs", "search")
 
   })
@@ -183,10 +183,10 @@ server <- function(input, output, session) {
 
       search_res$data %>%
           left_join(auctions_df, by=c("Auction"="title")) %>%
-          transmute(newcol = gen_pins( clean_description(Description),
-                                       link.item,
-                                       img_src,
-                                       date)) %>%
+          transmute(newcol = gen_pins(Description,
+                                      link.item,
+                                      img_src,
+                                      date)) %>%
           unlist %>%
           paste0( collapse="" ) %>%
           HTML
@@ -207,8 +207,8 @@ server <- function(input, output, session) {
           '" class="img-rounded" width="250"/></a>'
         ),
         Description = paste0(
-          Description %>% clean_description,
-          Description %>%
+            Description,
+            Description %>%
             gsub("((Item)? ?Description|Brand): ?", " ", .) %>%
             clean_description %>%
             gsub(" ", "+", .) %>%
@@ -216,9 +216,8 @@ server <- function(input, output, session) {
               '<a href="', amazon_base, . ,
               '" target="_blank"><i class="fa fa-external-link-square fa-lg">
                                   </i></a>'
-            )
-        )
-      ) %>%
+            ))
+        ) %>%
       select(Photo, Description, Item, Auction)
 
   },

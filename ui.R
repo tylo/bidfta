@@ -238,7 +238,9 @@ ui <- dashboardPage( skin = "black",
                     div( class="form-group",
                          tags$label( class="control-sidebar-subheading",
                                      "Search whole words",
-                                     tags$input( type="checkbox", class="pull-right",
+                                     tags$input( type="checkbox",
+                                                 class="pull-right",
+                                                 "checked" = TRUE,
                                                  id = "wrap_whole")
                          ),
                          p( HTML("Search terms wrapped in &#92;W" ))
