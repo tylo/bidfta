@@ -104,7 +104,7 @@ ui <- dashboardPage( skin = "black",
                   fluidRow(
                       tags$section(class="content-header",
                                    h1("Welcome to FastTrack Bidder",
-                                      tags$small("Version 0.55")
+                                      tags$small(textOutput("version"))
                                    ),
                                    #em("Brought to you by BBRI (Beaver Brigade Research & Innovation)"),
 
@@ -116,25 +116,18 @@ ui <- dashboardPage( skin = "black",
                                            tags$li(class="active", "Dashboard")
                                    )
                       ),
-                          box(title = "What's New!?!", collapsible = TRUE, width = 12,
-                              p("As of Version 0.55, scraped descriptions should be clean of generic info,
-                                resulting in better search"),
-                              p("As of Version 0.5, you can now search directly from the wishlist")
-                          ),
+                      box(title = "What's New!?!", collapsible = TRUE, width = 12,
+                          uiOutput("updates")),
                       br(),
                       infoBox("Ending Soon", width = 5,
                               icon = icon("clock-o"), fill = F, color = "yellow",
-                              uiOutput("endingsoon")
-                      ),
+                              uiOutput("endingsoon")),
                       infoBox("Local Auctions", width = 3,
                               icon = icon("calendar"), fill = F, color = "aqua",
-                              textOutput("numauctions")
-                      ),
+                              textOutput("numauctions")),
                       infoBox("Last Scraped", width = 4,
                               textOutput("lasttime"),
-                              icon = icon("calendar"), fill = F, color = "green"
-                      )
-                  ),
+                              icon = icon("calendar"), fill = F, color = "green")),
                   fluidRow(
                       box(title = "Watching",
                           # class="col-xs-12 col-sm-6 col-lg-8",
