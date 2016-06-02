@@ -36,6 +36,7 @@ pin_html <-
 
 time_file_format  <- "%Y-%m-%d %H:%M:%S"
 wishlist_loc <- "CSV/wishlist.csv"
+searches_loc <- "log/searches.csv"
 auctions_items_bar_split <- .5
 
 

@@ -64,6 +64,19 @@ server <- function(input, output, session) {
   #------------------------------------#
   ######################################
 
+
+  # ============================================================
+  # This part of the code monitors the file for changes once per
+  # 60 second (500 milliseconds).
+  fileReaderData <- reactiveFileReader(500, session, searches_loc, read.csv)
+
+  #### REACTIVE: SEARCH_RES ####
+  output$recent_searches <- renderUI(
+      fileReaderData() %>% tail(10) %>% .[,2] %>% paste0(collapse="<br>") %>% HTML
+  )
+
+  # ============================================================
+
   #### REACTIVE: SEARCH_RES ####
   search_res <- reactiveValues( data = NULL )
 
@@ -144,6 +157,24 @@ server <- function(input, output, session) {
     auctions_df %>% nrow
   )
 
+  #### OUTPUT: WISHLIST OUTPUT ####
+  observeEvent(wishlist$data,  {
+
+      tmp <- wishlist$data
+      cat("\nWishlist Terms:", tmp %>% paste(collapse = " | "), '\n\n')
+      output$wishlist <- DT::renderDataTable(tmp %>% data.frame,
+                                             rownames = FALSE,
+                                             colnames = NULL,
+                                             #style = 'bootstrap',
+                                             #width = "50%",
+                                             server = F,
+                                             class = 'hover',
+                                             selection = "single",
+                                             options = list(dom = 't',
+                                                            pageLength = 25)
+      )
+  })
+
   #### OUTPUT: ENDINGSOON ####
   output$endingsoon <- renderUI({
       auc <- auctions_df %>%
@@ -157,26 +188,6 @@ server <- function(input, output, session) {
   })
 
 
-
-  #### OUTPUT: WISHLIST OUTPUT ####
-  observeEvent(wishlist$data,  {
-
-    tmp <- wishlist$data
-    cat("\nWishlist Terms:", tmp %>% paste(collapse = " | "), '\n\n')
-    output$wishlist <- DT::renderDataTable(tmp %>% data.frame,
-                                           rownames = FALSE,
-                                           colnames = NULL,
-                                           #style = 'bootstrap',
-                                           #width = "50%",
-                                           server = F,
-                                           class = 'hover',
-                                           selection = "single",
-                                           options = list(dom = 't',
-                                                          pageLength = 25)
-    )
-  })
-
-
   ### OUTPUT: AUCTIONS_DF ###
   output$auctions_df  <- renderDataTable({
       auctions_df %>%
@@ -184,6 +195,8 @@ server <- function(input, output, session) {
           select(date, title, location)},
       escape = F
   )
+
+
 
 
   ### OUTPUT: PINS_DIV ###

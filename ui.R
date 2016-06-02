@@ -129,15 +129,8 @@ ui <- dashboardPage( skin = "black",
                               textOutput("lasttime"),
                               icon = icon("calendar"), fill = F, color = "green")),
                   fluidRow(
-                      box(title = "Watching",
-                          # class="col-xs-12 col-sm-6 col-lg-8",
-                          width = 8,
-                          collapsible = TRUE,
-                          div(class = "input-group-btn",
-                              actionButton(
-                                  "remove_watchlist", label = "", icon = icon("minus-square-o") #class = "btn-info"
-                              )
-                          )
+                      box(title = "Recent Searches", width = 8, collapsible = TRUE,
+                            uiOutput("recent_searches")
                       ),
                       box(title = "Wishlist",
                           # class = "col-xs-6 col-lg-4",
