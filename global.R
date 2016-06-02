@@ -21,7 +21,7 @@ amazon_base <- "http://www.amazon.com/s/ref=nb_sb_noss?url=search-alias%3Daps&fi
 gcal_base <- "https://www.google.com/calendar/render?action=TEMPLATE&text=[description]&dates=[start]&details=[details]&location=[location]"
 
 pin_html <-
-    '<div class="pin box box-info">
+'<div class="pin box box-info">
 <div class="box-header with-border">
 <h3 class="box-title">%s</h3></div>
 <div class="box-body">
@@ -33,6 +33,11 @@ pin_html <-
 <a href="%s" class="btn btn-box-tool" target="_blank"><i class="fa fa-calendar-plus-o"></i></a>
 </div></div>
 </div>'
+
+table_list_html <-
+'<p>%s</p></div>
+<a href="%s" class="btn btn-box-tool" target="_blank"><i class="fa fa-amazon"></i></a>
+<a href="%s" class="btn btn-box-tool" target="_blank"><i class="fa fa-calendar-plus-o"></i></a>'
 
 time_file_format  <- "%Y-%m-%d %H:%M:%S"
 wishlist_loc <- "CSV/wishlist.csv"
@@ -109,8 +114,7 @@ gen_title <- function(description, num_words=3) {
 #----- FUNCTION: GEN_AMAZON_URL -----#
 ######################################
 gen_amazon_url <- function(description) {
-        gsub(" +", "+", description) %>%
-        paste0(amazon_base, . )
+        gsub(" +", "+", description) %>% paste0(amazon_base, . )
 }
 
 ######################################
@@ -129,11 +133,12 @@ gen_gcal_url <- function(event_title, stime, description, loc="" ) {
         param_set( "location", loc )
 }
 
-
 ######################################
-#--------- FUNCTION: GEN_PINS -------#
+#---- FUNCTION: GEN_SEARCH_OUTPUT ----#
 ######################################
-gen_pins <- function(description, item_url, img_url, auction_end="", location="") {
+gen_search_output <- function(description, item_url, img_url="",
+                              auction_end="", location="",
+                              pins = T) {
 
     # short title for the pin
     title <- strip_sections(description) %>% gen_title(6)
@@ -143,10 +148,15 @@ gen_pins <- function(description, item_url, img_url, auction_end="", location=""
     # style the description
     description_html <- style_description(description)
 
-    sprintf(pin_html,
+    if (pins) {
+        sprintf(pin_html,
             strftime(auction_end, format = "%a %r", tz="America/New_York"),
             item_url, img_url, description_html, amazon_url, gcal_url)
+    } else { # table list
+        sprintf(table_list_html, description_html, amazon_url, gcal_url)
+    }
 }
+
 
 ######################################
 #--- FUNCTION: PARSE_DESCRIPTION ----#
@@ -160,6 +170,28 @@ parse_description <- function(description) {
 }
 
 ######################################
+#---- FUNCTION: GROK_DESCRIPTION ----#
+######################################
+grok_description <- function(vec) {
+    tabular <- vec[-1] %>% clean_str %>% matrix(byrow = T, ncol = 2)
+    split(tabular[,2], tabular[,1])
+}
+
+######################################
+#---- FUNCTION: RETRIEVE_FEATURE ----#
+######################################
+get_feature <- function(list_items, feature_name) {
+    lapply(list_items, "[[", feature_name ) %>% as.character %>% unlist
+}
+
+######################################
+#-------- FUNCTION: GET_MSRP --------#
+######################################
+get_MSRP <- function(list_items) {
+    list_items %>% get_feature("MSRP") %>% gsub('[$]',"",.) %>% as.numeric
+}
+
+######################################
 #------- FUNCTION: DO_SEARCH --------#
 ######################################
 do_search <- function(search_string, df, col.name = "Description", whole_words = T) {
@@ -168,7 +200,7 @@ do_search <- function(search_string, df, col.name = "Description", whole_words =
     data.frame(time = Sys.time(), search_string = search_string) %>%
         write.table("log/searches.csv", append = T, sep = ",", row.names = F, col.names = F )
 
-    ifelse(whole_words, paste0("\\W", search_string, '\\W'), search_string) %>%
+    ifelse(whole_words, paste0("\\W(", search_string, ')\\W'), search_string) %>%
         print %>%
         grepl(df[[col.name]], ignore.case = T) %>%
         df[.,]
@@ -369,8 +401,10 @@ get_itemlist  <- function(lnk, incr, progress_updater = NULL) {
         html_node("#DataTable") %>%
         html_table(header = T, fill = T) %>%
         mutate( Item = gsub("[.]","", Item),
-                Description = parse_description( Description ) ) %>%
-        mutate( link.item = paste0(root_link, Item) )
+                Description = parse_description(Description),
+                Features = lapply(strsplit(Description, "<<|:>>"), grok_description),
+                MSRP = get_MSRP(Features),
+                link.item = paste0(root_link, Item))
 
     cat(" |","itemlist ok")
     #itemlist %>%  print
@@ -394,7 +428,8 @@ get_itemlist  <- function(lnk, incr, progress_updater = NULL) {
         img_suffix <- gsub(img_prefix, "", img_link) %>%
             gsub("[a-zA-Z]*[0-9]+","",.)
 
-        itemlist %>% mutate(img_src = paste0(img_prefix, Item, img_suffix))
+        itemlist %>% mutate(img_src = paste0(img_prefix, Item, img_suffix)) %>%
+            select(-Features)
 
     })
 
