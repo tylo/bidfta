@@ -60,6 +60,15 @@ get_lastN_searches <- function(file_loc, n) {
 }
 
 ######################################
+#-- FUNCTION: PARSE_SEARCH_STRING ---#
+######################################
+parse_search_string <- function(str, split = T) {
+    cleaned <- gsub("\\W", " ", str) %>% clean_str()
+    if (split) cleaned <- strsplit(cleaned, " ") %>% unlist
+    return(cleaned)
+}
+
+######################################
 #------ FUNCTION: GET_WISHLIST ------#
 ######################################
 get_wishlist <- function() {

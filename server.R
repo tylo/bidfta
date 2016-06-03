@@ -77,6 +77,7 @@ server <- function(input, output, session) {
   ### REACTIVE: SEARCH_RES ####
   output$recent_searches <- renderUI(
       fileReaderData() %>%
+          parse_search_string(split = F) %>%
           paste0(collapse="<br>") %>%
           HTML
   )
