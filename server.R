@@ -54,7 +54,6 @@ server <- function(input, output, session) {
     names(s_options) <- s_options
     updateSelectInput(session, "locSelect", choices = s_options, selected = NULL)
 
-    version_hist <- readLines("VERSION")
     wishlist <- reactiveValues(data = get_wishlist())
 
 
@@ -138,11 +137,6 @@ server <- function(input, output, session) {
     #------------------------------------#
     ######################################
 
-
-    ##### OUTPUT: UPDATES #####
-    output$version <- renderText(
-        regmatches(version_hist[1], regexpr("\\d+[.]\\d+",version_hist[1]))
-    )
 
     ##### OUTPUT: UPDATES #####
     output$updates <- renderUI(

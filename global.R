@@ -46,6 +46,9 @@ searches_loc <- "log/searches.csv"
 searches_recent_N <- 100
 auctions_items_bar_split <- .5
 
+version_hist <- readLines("VERSION")
+version <- regmatches(version_hist[1], regexpr("\\d+[.]\\d+",version_hist[1]))
+
 
 ######################################
 #------------------------------------#

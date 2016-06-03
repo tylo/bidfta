@@ -104,7 +104,7 @@ ui <- dashboardPage( skin = "black",
                   fluidRow(
                       tags$section(class="content-header",
                                    h1("Welcome to FastTrack Bidder",
-                                      tags$small(textOutput("version"))
+                                      tags$small(version)
                                    ),
                                    #em("Brought to you by BBRI (Beaver Brigade Research & Innovation)"),
 
@@ -116,7 +116,8 @@ ui <- dashboardPage( skin = "black",
                                            tags$li(class="active", "Dashboard")
                                    )
                       ),
-                      box(title = "What's New!?!", collapsible = TRUE, width = 12,
+                      box(title = paste("What's New in Version", version, "!?!"), width = 12,
+                          collapsible = TRUE, collapsed = T,
                           uiOutput("updates")),
                       br(),
                       infoBox("Ending Soon", width = 5,
