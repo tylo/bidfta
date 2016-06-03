@@ -71,9 +71,16 @@ get_lastN_searches <- function(file_loc, n) {
 ######################################
 #-- FUNCTION: PARSE_SEARCH_STRING ---#
 ######################################
-parse_search_string <- function(str, split = T) {
-    cleaned <- gsub("\\W", " ", str) %>% clean_str()
-    if (split) cleaned <- strsplit(cleaned, " ") %>% unlist
+# The search string is first parsed for multiple search terms, then cleaned,
+# then either the multiple terms are unlisted (if SPLIT = T) or written back
+# out with some other separator charater, such as a newline.
+parse_search_string <- function(str, split = F, sep_char = ", ") {
+    cleaned <- gsub("[|]", "_", str) %>% gsub("\\W", " ", .) %>% clean_str()
+    cleaned <- if (split) {
+        strsplit(cleaned, "_") %>% unlist
+    } else {
+        gsub("_", sep_char, cleaned)
+    }
     return(cleaned)
 }
 
