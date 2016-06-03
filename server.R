@@ -171,6 +171,8 @@ server <- function(input, output, session) {
         a(auc$pretty, href = auc$link.pageditems, target="_blank")
     })
 
+
+
     #### OUTPUT: WISHLIST OUTPUT ####
     observeEvent(wishlist$data,  {
 
