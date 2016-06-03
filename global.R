@@ -37,6 +37,7 @@ pin_html <-
 time_file_format  <- "%Y-%m-%d %H:%M:%S"
 wishlist_loc <- "CSV/wishlist.csv"
 searches_loc <- "log/searches.csv"
+searches_recent_N <- 100
 auctions_items_bar_split <- .5
 
 
@@ -46,6 +47,17 @@ auctions_items_bar_split <- .5
 #------------------------------------#
 ######################################
 
+
+######################################
+#--- FUNCTION: GET_LASTN_SEARCHES ---#
+######################################
+get_lastN_searches <- function(file_loc, n) {
+    sprintf('tail -%s %s', n, file_loc) %>%
+        system(intern = TRUE) %>%
+        textConnection %>%
+        read.csv(stringsAsFactors = F) %>%
+        .[,2]
+}
 
 ######################################
 #------ FUNCTION: GET_WISHLIST ------#

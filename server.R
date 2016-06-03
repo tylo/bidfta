@@ -68,11 +68,17 @@ server <- function(input, output, session) {
   # ============================================================
   # This part of the code monitors the file for changes once per
   # 60 second (500 milliseconds).
-  fileReaderData <- reactiveFileReader(500, session, searches_loc, read.csv)
+  fileReaderData <- reactiveFileReader(500, session, searches_loc,
+                                       get_lastN_searches, searches_recent_N)
 
-  #### REACTIVE: SEARCH_RES ####
+  observe(fileReaderData() %>% str %>% print)
+
+
+  ### REACTIVE: SEARCH_RES ####
   output$recent_searches <- renderUI(
-      fileReaderData() %>% tail(10) %>% .[,2] %>% paste0(collapse="<br>") %>% HTML
+      fileReaderData() %>%
+          paste0(collapse="<br>") %>%
+          HTML
   )
 
   # ============================================================
