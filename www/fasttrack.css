@@ -17,6 +17,10 @@ body {
 	margin: 10px auto;
 }
 
+#recent_searches {
+    font-size: 12px;
+}
+
 #columns {
 	-webkit-column-count: 3;
 	-webkit-column-gap: 20px;

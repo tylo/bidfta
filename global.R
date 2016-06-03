@@ -8,6 +8,7 @@ library(knitr)
 library(rjson)
 require(parallel)
 require(urltools)
+require(bubbles)
 
 # Some constants
 auto_refresh_time <- 3600 * 3
@@ -41,6 +42,8 @@ table_list_html <-
 
 time_file_format  <- "%Y-%m-%d %H:%M:%S"
 wishlist_loc <- "CSV/wishlist.csv"
+searches_loc <- "log/searches.csv"
+searches_recent_N <- 100
 auctions_items_bar_split <- .5
 
 
@@ -50,6 +53,26 @@ auctions_items_bar_split <- .5
 #------------------------------------#
 ######################################
 
+
+######################################
+#--- FUNCTION: GET_LASTN_SEARCHES ---#
+######################################
+get_lastN_searches <- function(file_loc, n) {
+    sprintf('tail -%s %s', n, file_loc) %>%
+        system(intern = TRUE) %>%
+        textConnection %>%
+        read.csv(stringsAsFactors = F) %>%
+        .[,2]
+}
+
+######################################
+#-- FUNCTION: PARSE_SEARCH_STRING ---#
+######################################
+parse_search_string <- function(str, split = T) {
+    cleaned <- gsub("\\W", " ", str) %>% clean_str()
+    if (split) cleaned <- strsplit(cleaned, " ") %>% unlist
+    return(cleaned)
+}
 
 ######################################
 #------ FUNCTION: GET_WISHLIST ------#
