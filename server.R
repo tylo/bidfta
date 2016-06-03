@@ -64,7 +64,6 @@ server <- function(input, output, session) {
     #------------------------------------#
     ######################################
 
-
     # ============================================================
     # This part of the code monitors the file for changes once per
     # 60 second (500 milliseconds).
@@ -171,7 +170,6 @@ server <- function(input, output, session) {
 
         a(auc$pretty, href = auc$link.pageditems, target="_blank")
     })
-
 
     #### OUTPUT: WISHLIST OUTPUT ####
     observeEvent(wishlist$data,  {
