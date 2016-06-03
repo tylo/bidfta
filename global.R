@@ -8,6 +8,7 @@ library(knitr)
 library(rjson)
 require(parallel)
 require(urltools)
+require(bubbles)
 
 # Some constants
 auto_refresh_time <- 3600 * 3

@@ -130,7 +130,8 @@ ui <- dashboardPage( skin = "black",
                               icon = icon("calendar"), fill = F, color = "green")),
                   fluidRow(
                       box(title = "Recent Searches", width = 8, collapsible = TRUE,
-                            uiOutput("recent_searches")
+                          # uiOutput("recent_searches")
+                          bubblesOutput("recent_searches", width = "100%", height = 350)
                       ),
                       box(title = "Wishlist",
                           # class = "col-xs-6 col-lg-4",
@@ -229,7 +230,15 @@ ui <- dashboardPage( skin = "black",
                                                  "checked" = TRUE,
                                                  id = "wrap_whole")
                          ),
-                         p( HTML("Search terms wrapped in &#92;W" ))
+                         p( HTML("Search terms wrapped in &#92;W" )),
+                         tags$label( class="control-sidebar-subheading",
+                                     "Separate search terms",
+                                     tags$input( type="checkbox",
+                                                 class="pull-right",
+                                                 "checked" = TRUE,
+                                                 id = "split_search_str")
+                         ),
+                         p( HTML("Break up compound searches into individual search terms on the home page bubble chart" ))
                     )
                )
           )
