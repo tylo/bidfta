@@ -1,4 +1,5 @@
-<p>As of <code>Version 0.61</code>, table-list view of search results is fixed and exceeds the functionality of Pins view. You can use it to sort results by MSRP, for example.</p>
-<p>As of <code>Version 0.6</code>, whole-word search is enabled by default. Disable it in the settings (top right gears).</p>
-<p>As of <code>Version 0.55</code>, scraped descriptions should be clean of generic info, resulting in better search.</p>
-<p>As of <code>Version 0.5</code>, you can now search directly from the wishlist.</p>
+<p<code>Version 0.62</code>, recent search history is displayed in a bubble plot on the home page. You can control how compound searches are treated with an option in the settings (top right dropdown).</p>
+<p><code>Version 0.61</code>, table-list view of search results is fixed and exceeds the functionality of Pins view. You can use it to sort results by MSRP, for example.</p>
+<p><code>Version 0.6</code>, whole-word search is enabled by default. Disable it in the settings (top right gears).</p>
+<p><code>Version 0.55</code>, scraped descriptions should be clean of generic info, resulting in better search.</p>
+<p><code>Version 0.5</code>, you can now search directly from the wishlist.</p>
