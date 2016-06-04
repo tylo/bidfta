@@ -66,11 +66,13 @@ server <- function(input, output, session) {
     # ============================================================
     # This part of the code monitors the file for changes once per
     # 60 second (500 milliseconds).
-    fileReaderData <- reactiveFileReader(5000, session, searches_loc,
-                                         get_lastN_searches, searches_recent_N)
+    fileReaderData <- reactive({
+        reactiveFileReader(5000, session, searches_loc,
+                           get_lastN_searches, input$recent_searches_N)
+    })
 
     output$recent_searches <- renderBubbles({
-        search_counts <- fileReaderData() %>%
+        search_counts <- fileReaderData()() %>%
             parse_search_string(split = input$split_search_str) %>%
             table %>% sort(decreasing = T)
 

@@ -218,28 +218,32 @@ ui <- dashboardPage( skin = "black",
           div( class = "tab-content",
                div( class = "tab-pane active", id="control-sidebar-settings-tab",
 
-                    h3( class="control-sidebar-heading",
+                    h3(class="control-sidebar-heading",
                         "Search Settings"
                     ),
 
                     ## <!-- /.form-group -->
-                    div( class="form-group",
-                         tags$label( class="control-sidebar-subheading",
-                                     "Search whole words",
-                                     tags$input( type="checkbox",
-                                                 class="pull-right",
-                                                 "checked" = TRUE,
-                                                 id = "wrap_whole")
+                    div(class="form-group",
+
+                         #### ------ WRAP_WHOLE -------- ####
+                         settingInput(inputID = "wrap_whole", label = "Search whole words",
+                                      description = "Search terms wrapped in &#92;W",
+                                      default_value = T
                          ),
-                         p( HTML("Search terms wrapped in &#92;W" )),
-                         tags$label( class="control-sidebar-subheading",
-                                     "Separate search terms",
-                                     tags$input( type="checkbox",
-                                                 class="pull-right",
-                                                 "checked" = TRUE,
-                                                 id = "split_search_str")
-                         ),
-                         p( HTML("Break up compound searches into individual search terms on the home page bubble chart" ))
+
+                        #### ------ RECENT_SEARCHES_N -------- ####
+                        settingInput(inputID = "recent_searches_N",
+                                     label = "Recent search terms on chart",
+                                     description = "Maximum number of search terms to show on the bubble chart",
+                                     default_value = 50, type = "slider",
+                                     min = 10, max = 100, ticks = F
+                        ),
+
+                         #### ------ SPLIT_SEARCH_STR -------- ####
+                        settingInput(inputID = "split_search_str", label = "Separate search terms",
+                                     description = "Break up compound searches into individual search terms on the home page bubble chart",
+                                     default_value = T
+                        )
                     )
                )
           )

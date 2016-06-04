@@ -43,7 +43,6 @@ table_list_html <-
 time_file_format  <- "%Y-%m-%d %H:%M:%S"
 wishlist_loc <- "CSV/wishlist.csv"
 searches_loc <- "log/searches.csv"
-searches_recent_N <- 100
 auctions_items_bar_split <- .5
 
 version_hist <- readLines("VERSION")
@@ -55,6 +54,26 @@ version <- regmatches(version_hist[1], regexpr("\\d+[.]\\d+",version_hist[1]))
 #------- HELPER FUNCTIONS -----------#
 #------------------------------------#
 ######################################
+
+
+settingInput <- function(inputID, label, description,  default_value, type = "checkbox", ...) {
+    if (type == "checkbox") {
+        inputTag <- tags$input(id = inputID, type = "checkbox", class="pull-right")
+        if (!is.null(default_value) && default_value) inputTag$attribs$checked <- "checked"
+        tmp_div <- div(class = "form-group", tags$label(label, inputTag))
+
+    } else if (type == "slider") {
+        tmp_div <- sliderInput(inputID, label = label, value = default_value, ...)
+    }
+
+    tmp_div$children[[which(sapply(tmp_div$children, "[[", "name") == "label")]]$attribs$class <-
+        "control-sidebar-subheading"
+
+    tmp_div$children[[length(tmp_div$children) + 1]] <- p(HTML(description))
+        # tags$label(class="control-sidebar-subheading", label, inputTag),
+        #
+    tmp_div
+}
 
 
 ######################################
