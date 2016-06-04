@@ -235,7 +235,7 @@ ui <- dashboardPage( skin = "black",
                         settingInput(inputID = "recent_searches_N",
                                      label = "Recent search terms on chart",
                                      description = "Maximum number of search terms to show on the bubble chart",
-                                     default_value = 50, type = "slider",
+                                     default_value = 25, type = "slider",
                                      min = 10, max = 100, ticks = F
                         ),
 
