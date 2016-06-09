@@ -6,7 +6,7 @@ library(shiny)
 library(shinydashboard)
 
 ui <- dashboardPage( skin = "black",
-  dashboardHeader( title = "FastTrack Bidder",
+  dashboardHeader( title = "Shurik Site",
 
     dropdownMenu( type = "notifications",
       notificationItem(
